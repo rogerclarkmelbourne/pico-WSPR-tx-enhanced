@@ -113,6 +113,7 @@ typedef struct
     uint8_t _u8_ixw;
     uint8_t _is_sentence_ready;
     int32_t _i32_error_count;
+    volatile bool GpsNmeaReceived;
 
 } GPStimeContext;
 

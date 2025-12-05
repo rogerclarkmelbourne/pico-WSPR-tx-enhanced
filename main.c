@@ -99,7 +99,7 @@ int main()
     assert_(pWB);
     pWSPR = pWB;
     
-    pWB->_txSched._u8_tx_GPS_mandatory  = CONFIG_GPS_SOLUTION_IS_MANDATORY;
+    pWB->_txSched._u8_tx_GPS_mandatory  = false;
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
     pWB->_txSched._u8_tx_slot_skip      = CONFIG_SCHEDULE_SKIP_SLOT_COUNT;
 
@@ -108,6 +108,13 @@ int main()
 
     DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
     assert_(DCO._pGPStime);
+    
+    sleep_ms(500);// allow time for any NMEA message
+    if (DCO._pGPStime->GpsNmeaReceived)
+    {
+        StampPrintf("GPS detected\n");
+        pWB->_txSched._u8_tx_GPS_mandatory = true; 
+    }
 
     int tick = 0;
     for(;;)

@@ -85,6 +85,7 @@ GPStimeContext *GPStimeInit(int uart_id, int uart_baud, int pps_gpio)
     pgt->_uart_id = uart_id;
     pgt->_uart_baudrate = uart_baud;
     pgt->_pps_gpio = pps_gpio;
+    pgt->GpsNmeaReceived = false;
 
     spGPStimeContext = pgt;
     spGPStimeData = &pgt->_time_data;
@@ -207,6 +208,7 @@ void RAM (GPStimeUartRxIsr)()
 
         if(spGPStimeContext->_is_sentence_ready)
         {
+            spGPStimeContext->GpsNmeaReceived = true;
             spGPStimeContext->_u8_ixw = 0;
             spGPStimeContext->_i32_error_count -= GPStimeProcNMEAsentence(spGPStimeContext);
         }
