@@ -161,13 +161,21 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int verbose)
         {
             if(!itx_trigger)
             {
-                itx_trigger = 1;
-                if(verbose) StampPrintf("WSPR> Start TX.");
+                int secsIntoCurrentSlot = (u32_unixtime_now % (2 * MINUTE));
+                if (secsIntoCurrentSlot == 0)
+                {
+                    itx_trigger = 1;
+                    if(verbose) StampPrintf("WSPR> Start TX.");
 
-                PioDCOStart(pctx->_pTX->_p_oscillator);
-                WSPRbeaconCreatePacket(pctx);
-                sleep_ms(100);
-                WSPRbeaconSendPacket(pctx);
+                    PioDCOStart(pctx->_pTX->_p_oscillator);
+                    WSPRbeaconCreatePacket(pctx);
+                    sleep_ms(100);
+                    WSPRbeaconSendPacket(pctx);
+                }
+                else
+                {
+                   if(verbose) StampPrintf("Can't stert in the middle of an active slot %d", (2 * MINUTE) - secsIntoCurrentSlot); 
+                }
             }
         }
         else
