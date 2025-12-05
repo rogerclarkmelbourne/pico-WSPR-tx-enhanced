@@ -233,8 +233,6 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
 
     if(prmc)
     {
-        printf("NMEA %s\n",prmc);
-
         ++pg->_time_data._u32_nmea_gprmc_count;
 
         uint64_t tm_fix = GetUptime64();
