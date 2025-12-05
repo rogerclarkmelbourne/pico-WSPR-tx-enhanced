@@ -225,28 +225,41 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
     assert_(pg);
 
     uint8_t *prmc = (uint8_t *)strnstr((char *)pg->_pbytebuff, "$GPRMC,", sizeof(pg->_pbytebuff));
+
+    if (prmc == NULL)
+    {
+        prmc = (uint8_t *)strnstr((char *)pg->_pbytebuff, "$GNRMC,", sizeof(pg->_pbytebuff));
+    }
+
     if(prmc)
     {
+        printf("NMEA %s\n",prmc);
+
         ++pg->_time_data._u32_nmea_gprmc_count;
 
         uint64_t tm_fix = GetUptime64();
-        uint8_t u8ixcollector[16] = {0};
+        uint32_t u8ixcollector[32] = {0};
         uint8_t chksum = 0;
-        for(uint8_t u8ix = 0, i = 0; u8ix != sizeof(pg->_pbytebuff); ++u8ix)
+        uint32_t paramaterCount;
+        uint32_t index;
+
+        for(index = 0, paramaterCount = 0; index != sizeof(pg->_pbytebuff); ++index)
         {
-            uint8_t *p = pg->_pbytebuff + u8ix;
+            uint8_t *p = pg->_pbytebuff + index;
             chksum ^= *p;
             if(',' == *p)
             {
                 *p = 0;
-                u8ixcollector[i++] = u8ix + 1;
-                if('*' == *p || 12 == i)
+                u8ixcollector[paramaterCount++] = index + 1;
+                if('*' == *p || 32 == paramaterCount)
                 {
                     break;
                 }
             }
         }
         
+        paramaterCount--;//
+
         pg->_time_data._u8_is_solution_active = 'A' == prmc[u8ixcollector[1]];
 
         if(pg->_time_data._u8_is_solution_active)
@@ -273,7 +286,7 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
                 return -3;
             }
 
-            if('*' != prmc[u8ixcollector[11] + 1])
+            if('*' != prmc[u8ixcollector[paramaterCount] + 1])
             {
                 return -4;
             }
