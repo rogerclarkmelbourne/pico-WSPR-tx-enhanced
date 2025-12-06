@@ -35,6 +35,7 @@ target_sources(pico-hf-oscillator-test PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/test.c
         ${CMAKE_CURRENT_LIST_DIR}/conswrapper.c
         ${CMAKE_CURRENT_LIST_DIR}/hfconsole/hfconsole.c
+        ${CMAKE_CURRENT_LIST_DIR}/persistentStorage.c
         )
 
 pico_set_program_name(pico-hf-oscillator-test "pico-hf-oscillator-test")
