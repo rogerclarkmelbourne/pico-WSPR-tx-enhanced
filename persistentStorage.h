@@ -39,6 +39,6 @@ int parse_kv(const char *input, char *key, char *value) ;
 void convertToUpper(char str[]);
 int bandIndexFromString(char *bandString);
 
-void handleSettings(void);
+void handleSettings(bool buttonIsPressed);
 
 #endif

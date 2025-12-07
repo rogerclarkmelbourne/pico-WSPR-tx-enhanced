@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x05;
+const uint32_t  CURRENT_VERSION = 0x00;
 
 SettingsData settingsData;
 
@@ -17,16 +17,16 @@ const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET
 
 const uint32_t bandNames[NUM_BANDS] = { 160, 80, 40, 30, 20, 17, 15, 12, 10, 6};
 const uint32_t bandFrequencies[NUM_BANDS] = {
-         1840000,
-         3560000,
+         1838000,
+         3570000,
          7040000,
-        10136000,
-        14096000,
+        10140100,
+        14097000,
         18106000,
         21096000,
         24926000,
         28126000,
-        50293000 
+        50294400 
 };
 
 
@@ -96,7 +96,7 @@ void settingsReadFromFlash(void)
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator4, 0x00, 16);// completely erase
-        settingsData.slotSkip           =   5;
+        settingsData.slotSkip           =   2;
         settingsWriteToFlash();
     }
 }
@@ -188,17 +188,12 @@ int bandIndexFromString(char *bandString)
 }
 
 
-void handleSettings(void)
+void handleSettings(bool buttonIsPressed)
 {
-    if (getchar())
-    {
-        settingsData.magicNumber = 0;
-        settingsWriteToFlash();
-    }
 
     settingsReadFromFlash();
     
-    if (!settingsCheckSettings())
+    if (!settingsCheckSettings() || getchar() || buttonIsPressed)
     {
         char key[MAX_KEY];
         char value[MAX_VAL];

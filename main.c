@@ -90,9 +90,6 @@ WSPRbeaconContext *pWSPR;
 
 int main()
 {
-    StampPrintf("\n");
-    sleep_ms(4000);
-    StampPrintf("R2BDY Pico-WSPR-tx start.");
 
     InitPicoHW();
     rtc_init();
@@ -103,9 +100,10 @@ int main()
 
     PioDco DCO = {0};
 
-    StampPrintf("WSPR beacon init...");
+    StampPrintf("\n");
+    StampPrintf("R2BDY Pico-WSPR-tx start.");
 
-    handleSettings();
+    handleSettings(gpio_get(BTN_PIN));
 
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
@@ -126,14 +124,20 @@ int main()
     multicore_launch_core1(Core1Entry);
     StampPrintf("RF oscillator started.");
 
+#if false
     DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
+ #else
+     DCO._pGPStime = calloc(1, sizeof(GPStimeContext));
+     DCO._pGPStime->GpsNmeaReceived = false;
+ #endif   
     assert_(DCO._pGPStime);
+
     
     sleep_ms(2000);// allow time for any GPS NMEA message
 
     int initialSlotOffset;
 
-    if (DCO._pGPStime->GpsNmeaReceived && false)
+    if (DCO._pGPStime->GpsNmeaReceived)
     {
         StampPrintf("GPS detected");
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
