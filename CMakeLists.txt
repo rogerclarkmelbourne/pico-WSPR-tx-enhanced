@@ -37,6 +37,7 @@ target_sources(pico-wspr-tx PUBLIC
                ${CMAKE_CURRENT_LIST_DIR}/init.c
                ${CMAKE_CURRENT_LIST_DIR}/core1.c
                ${CMAKE_CURRENT_LIST_DIR}/main.c
+               ${CMAKE_CURRENT_LIST_DIR}/persistentStorage.c
               )
 
 pico_set_program_name(pico-wspr-tx "pico-wspr-tx")
@@ -63,6 +64,7 @@ target_link_libraries(pico-wspr-tx
                       hardware_timer
                       hardware_clocks
                       hardware_pio
+                      hardware_rtc
                      )
 
 pico_add_extra_outputs(pico-wspr-tx)

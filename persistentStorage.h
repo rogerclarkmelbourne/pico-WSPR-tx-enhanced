@@ -1,31 +1,44 @@
 #ifndef PERSISTENT_STORAGE_H_
 #define PERSISTENT_STORAGE_H_
+
 #include <stdint.h>
+#include <ctype.h>
 #include "hardware/flash.h"
 #include "hardware/sync.h"
 
+#define MAX_KEY 64
+#define MAX_VAL 256
+#define NUM_BANDS 10
 
-const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x02;
+extern const uint64_t  MAGIC_NUMBER ;
+extern const uint32_t  CURRENT_VERSION;
 
 typedef struct  {
     uint64_t    magicNumber;
     uint32_t    settingsVersion;
+    int32_t     freqCalibrationPPM;
     uint8_t     callsign[16];
     uint8_t     locator4[16];
     int8_t      bandIndex;
     int8_t      slotSkip;
 } SettingsData;
 
-SettingsData settingsData;
+extern SettingsData settingsData;
 
 // Use last sector at the top of flash for storage
-const uint32_t FLASH_TARGET_OFFSET = (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE);
-const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
+extern const uint32_t FLASH_TARGET_OFFSET;
+extern const uint8_t *flash_target_contents;
 
-extern void settingsReadFromFlash(void);
-extern void settingsWriteToFlash(void);
-extern bool settingsCheckSettings(void);
+extern const uint32_t bandNames[NUM_BANDS];
+extern const uint32_t bandFrequencies[NUM_BANDS];
 
+void settingsReadFromFlash(void);
+void settingsWriteToFlash(void);
+bool settingsCheckSettings(void);
+int parse_kv(const char *input, char *key, char *value) ;
+void convertToUpper(char str[]);
+int bandIndexFromString(char *bandString);
+
+void handleSettings(void);
 
 #endif
