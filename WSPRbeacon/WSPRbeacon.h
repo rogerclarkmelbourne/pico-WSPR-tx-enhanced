@@ -56,6 +56,8 @@
 #include <string.h>
 #include <TxChannel.h>
 #include <logutils.h>
+#include "hardware/rtc.h"
+#include "pico/util/datetime.h"
 
 typedef struct
 {
@@ -88,7 +90,7 @@ void WSPRbeaconSetDialFreq(WSPRbeaconContext *pctx, uint32_t freq_hz);
 int WSPRbeaconCreatePacket(WSPRbeaconContext *pctx);
 int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx);
 
-int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int verbose);
+int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initialSlotOffset, int verbose);
 
 void WSPRbeaconDumpContext(const WSPRbeaconContext *pctx);
 

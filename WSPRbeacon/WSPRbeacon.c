@@ -128,40 +128,52 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
 /// @param pctx Ptr to Context.
 /// @param verbose Whether stdio output is needed.
 /// @return 0 if OK, -1 if NO GPS received available
-int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int verbose)
+int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initSlotOffset, int verbose)
 {
     assert_(pctx);
 
-    const uint64_t u64tmnow = GetUptime64();
-    const uint32_t is_GPS_available = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count;
-    const uint32_t is_GPS_active = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u8_is_solution_active;
-    const uint32_t is_GPS_override = pctx->_txSched._u8_tx_GPS_past_time == YES;
+    datetime_t rtcDateTime;
+    uint64_t u64tmnow;
+    uint32_t is_GPS_active;
+    uint32_t is_GPS_override;
+    uint64_t u64_GPS_last_age_sec;
+    uint32_t u32_unixtime_now;
+    int isec_of_hour;
+    int islot_number;
+    int islot_modulo;
 
-    const uint64_t u64_GPS_last_age_sec 
-        = (u64tmnow - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL;
 
-    if(!is_GPS_available)
+    if( pctx->_txSched._u8_tx_GPS_mandatory)
     {
-        if(verbose) StampPrintf("WSPR> Waiting for GPS receiver...");
-        return -1;
+        //is_GPS_active = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u8_is_solution_active;
+        //is_GPS_override = pctx->_txSched._u8_tx_GPS_past_time == YES;
+
+        isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
+
+    }
+    else
+    {
+        rtc_get_datetime(&rtcDateTime);
+        isec_of_hour = rtcDateTime.min * 60 + rtcDateTime.sec;
+        
     }
 
+    islot_number = (isec_of_hour + (initSlotOffset * 2 * MINUTE)) / (2 * MINUTE);
+    islot_modulo = islot_number % pctx->_txSched._u8_tx_slot_skip;
+
+#if false    
     if(is_GPS_active || (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last &&
                          is_GPS_override && u64_GPS_last_age_sec < WSPR_MAX_GPS_DISCONNECT_TM))
+#endif                         
     {
-        const uint32_t u32_unixtime_now 
-            = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + u64_GPS_last_age_sec;
-        
-        const int isec_of_hour = u32_unixtime_now % HOUR;
-        const int islot_number = isec_of_hour / (2 * MINUTE);
-        const int islot_modulo = islot_number % pctx->_txSched._u8_tx_slot_skip;
+
 
         static int itx_trigger = 0;
-        if(ZERO == islot_modulo)
+        if((ZERO == islot_modulo))
         {
             if(!itx_trigger)
             {
-                int secsIntoCurrentSlot = (u32_unixtime_now % (2 * MINUTE));
+                int secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
                 if (secsIntoCurrentSlot == 0)
                 {
                     itx_trigger = 1;

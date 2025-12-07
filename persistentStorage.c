@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x00;
+const uint32_t  CURRENT_VERSION = 0x05;
 
 SettingsData settingsData;
 
@@ -92,14 +92,14 @@ void settingsReadFromFlash(void)
     {   
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
-        settingsData.bandIndex          =   -1;// not set
+        settingsData.bandIndex          =   2;// 40m
+        settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator4, 0x00, 16);// completely erase
-        settingsData.slotSkip           =   -1;//not set
+        settingsData.slotSkip           =   5;
         settingsWriteToFlash();
     }
 }
-
 
 void settingsWriteToFlash(void)
 {
@@ -119,42 +119,46 @@ bool settingsCheckSettings(void)
 
     if (settingsData.callsign[0] == 0x00)
     {
-        printf("Error: Callsign not set\n");
+        printf("Error: CALLSIGN not set\n");
         retVal = false;
     }
     else
     {
-        printf("Callsign:%s\n",settingsData.callsign);
+        printf("CALLSIGN:%s\n",settingsData.callsign);
     }
     
     if (settingsData.locator4[0] == 0x00)
     {
-        printf("Error: Maidenhead Locator not set\n");
+        printf("Error: LOCATOR not set\n");
         retVal = false;
     }
     else
     {
-        printf("Location:%s\n",settingsData.locator4);   
+        printf("LOCATOR:%s\n",settingsData.locator4);   
     }
     if (settingsData.bandIndex == -1)
     {
-        printf("Error: Band not set\n");
+        printf("Error: BAND not set\n");
         retVal = false;
     }
     else
     {
-        printf("Band:%dm\n",bandNames[settingsData.bandIndex]);   
+        printf("BAND:%dm\n",bandNames[settingsData.bandIndex]);   
     }
 
     if (settingsData.slotSkip == -1)
     {
-        printf("Error: Slot Skip not set\n");
+        printf("Error: SLOTSKIP not set\n");
         retVal = false;
     }
     else
     {
-        printf("Slot skip:%d\n",settingsData.slotSkip);   
+        printf("SLOTSKIP:%d\n",settingsData.slotSkip);   
     }
+
+
+    printf("CALPPM:%d\n", settingsData.freqCalibrationPPM);
+
     
     return retVal;
 }
@@ -169,8 +173,6 @@ int bandIndexFromString(char *bandString)
 
 
     uint32_t bandStringNumber = atoi(bandString);
-
-    printf("Band str is %s %d\n",bandString,bandStringNumber);
 
 
     int  bandIndexFound = -1;
@@ -188,21 +190,23 @@ int bandIndexFromString(char *bandString)
 
 void handleSettings(void)
 {
-  if (getchar())
+    if (getchar())
     {
         settingsData.magicNumber = 0;
         settingsWriteToFlash();
     }
 
     settingsReadFromFlash();
-
+    
+    if (!settingsCheckSettings())
     {
         char key[MAX_KEY];
         char value[MAX_VAL];
         char line[100];
-        while (!settingsCheckSettings())
+
+        while (true)
         {
-            printf("Enter a Callsign,Locator, or Band in the form  SETTING=VALUE\ne.g. callsign=vk3kyy  or locator=aa11 or band=20m\n");
+            printf("Enter setting in the form SETTING=VALUE\ne.g. CALLSIGN=VK3KYY or LOCATOR=AA00\n\n");
 
             int idx = 0;
             for (;;)
@@ -229,8 +233,6 @@ void handleSettings(void)
                 sleep_ms(1);
             }
 
-           // printf("... You entered: %s\n", line);
-
             convertToUpper(line);
 
             bool settingsAreDirty = false;
@@ -241,7 +243,7 @@ void handleSettings(void)
                 {
                     strcpy(settingsData.callsign, value);
 
-                    printf("Setting callsign to %s\n",settingsData.callsign);
+                    printf("\nSetting callsign to %s\n",settingsData.callsign);
 
                     settingsAreDirty = true;
                 }
@@ -251,7 +253,7 @@ void handleSettings(void)
                     {
                         strcpy(settingsData.locator4, value);
 
-                        printf("Setting locator to %s\n",settingsData.locator4);
+                        printf("\nSetting locator to %s\n",settingsData.locator4);
 
                         settingsAreDirty = true;
                     }
@@ -260,10 +262,17 @@ void handleSettings(void)
                         if (strcmp("BAND", key) == 0)
                         {
                             int newBandIndex = bandIndexFromString(value);
-                            settingsData.bandIndex = newBandIndex;
+                            if (newBandIndex!= -1)
+                            {
+                                settingsData.bandIndex = newBandIndex;
 
-                            printf("Setting band index to %d\n",settingsData.bandIndex);
-                            settingsAreDirty = true;
+                                printf("\nSetting band to %dm\n", bandNames[settingsData.bandIndex]);
+                                settingsAreDirty = true;
+                            }
+                            else
+                            {
+                                printf("\nError: Unknown band\n");
+                            }
                         }
                         else
                         {
@@ -271,12 +280,22 @@ void handleSettings(void)
                             {
                                 settingsData.slotSkip = atoi(value);
 
-                                printf("Setting Slot skip to %d\n",settingsData.slotSkip);
+                                printf("\nSetting Slot skip to %d\n",settingsData.slotSkip);
                                 settingsAreDirty = true;
                             }
                             else
                             {
-                                printf("Uknown setting\n");
+                                if (strcmp("CALPPM", key) == 0)
+                                {
+                                    settingsData.freqCalibrationPPM = atoi(value);
+
+                                    printf("\nSetting frequency calibration to %d ppm\n",settingsData.freqCalibrationPPM);
+                                    settingsAreDirty = true;
+                                }
+                                else
+                                {
+                                    printf("Uknown setting\n");
+                                }
                             }
                         }
                     }
@@ -284,7 +303,7 @@ void handleSettings(void)
             } 
             else 
             {
-                printf("Invalid command format.\n\n");
+                printf("\nInvalid command format.\n\n");
                 settingsCheckSettings();
                 printf("\n\n");
             }
