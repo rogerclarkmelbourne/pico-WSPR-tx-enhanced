@@ -186,7 +186,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initSlotOffset, int verbo
                 }
                 else
                 {
-                   if(verbose) StampPrintf("Can't stert in the middle of an active slot %d", (2 * MINUTE) - secsIntoCurrentSlot); 
+                   if(verbose) StampPrintf("Can't start in the middle of an active slot %d", (2 * MINUTE) - secsIntoCurrentSlot); 
                 }
             }
         }

@@ -124,7 +124,7 @@ int main()
     multicore_launch_core1(Core1Entry);
     StampPrintf("RF oscillator started.");
 
-#if false
+#if true
     DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
  #else
      DCO._pGPStime = calloc(1, sizeof(GPStimeContext));
@@ -141,7 +141,7 @@ int main()
     {
         StampPrintf("GPS detected");
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
-        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count == 0)
+        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count < 10)
         {
             StampPrintf("WSPR> Waiting for GPS receiver...");
             sleep_ms(1000);
@@ -150,6 +150,8 @@ int main()
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
     
         initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
+
+
     }
     else
     {
