@@ -90,7 +90,7 @@ void WSPRbeaconSetDialFreq(WSPRbeaconContext *pctx, uint32_t freq_hz);
 int WSPRbeaconCreatePacket(WSPRbeaconContext *pctx);
 int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx);
 
-int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initialSlotOffset, int verbose);
+int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initialSlotOffset, int verbose);
 
 void WSPRbeaconDumpContext(const WSPRbeaconContext *pctx);
 

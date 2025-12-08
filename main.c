@@ -135,7 +135,7 @@ int main()
     
     sleep_ms(2000);// allow time for any GPS NMEA message
 
-    int initialSlotOffset;
+    uint32_t initialSlotOffset;
 
     if (DCO._pGPStime->GpsNmeaReceived)
     {
@@ -228,7 +228,7 @@ int main()
         sleep_ms(100);
         gpio_put(PICO_DEFAULT_LED_PIN, 0);
 
-#ifdef DEBUG
+#if (defined(DEBUG) && false)
         if(0 == ++tick % 60)
             WSPRbeaconDumpContext(pWB);
 #endif

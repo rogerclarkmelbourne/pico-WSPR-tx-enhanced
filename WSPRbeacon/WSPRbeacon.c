@@ -128,7 +128,7 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
 /// @param pctx Ptr to Context.
 /// @param verbose Whether stdio output is needed.
 /// @return 0 if OK, -1 if NO GPS received available
-int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initSlotOffset, int verbose)
+int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int verbose)
 {
     assert_(pctx);
 
@@ -138,9 +138,9 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initSlotOffset, int verbo
     uint32_t is_GPS_override;
     uint64_t u64_GPS_last_age_sec;
     uint32_t u32_unixtime_now;
-    int isec_of_hour;
-    int islot_number;
-    int islot_modulo;
+    uint32_t isec_of_hour;
+    uint32_t islot_number;
+    uint32_t islot_modulo;
 
 
     if( pctx->_txSched._u8_tx_GPS_mandatory)
@@ -169,11 +169,14 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initSlotOffset, int verbo
 
 
         static int itx_trigger = 0;
+
+        uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
+
         if((ZERO == islot_modulo))
         {
+
             if(!itx_trigger)
             {
-                int secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
                 if (secsIntoCurrentSlot == 0)
                 {
                     itx_trigger = 1;
@@ -184,17 +187,40 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, int initSlotOffset, int verbo
                     sleep_ms(100);
                     WSPRbeaconSendPacket(pctx);
                 }
+#if false
                 else
                 {
-                   if(verbose) StampPrintf("Can't start in the middle of an active slot %d", (2 * MINUTE) - secsIntoCurrentSlot); 
+                   if(verbose) 
+                   {    
+                        StampPrintf("Can't start in the middle of an active slot %d", (2 * MINUTE) - secsIntoCurrentSlot); 
+                   }
+                }
+#endif
+            }
+            else
+            {
+                // WSPR Tx data only lasts  110.6 seconds, 
+                // and is supposed to start 1 second after the start of an even numbered minute
+                // So the osc can be safely stopped after 113 seconds 
+                if (secsIntoCurrentSlot == 113)
+                {
+                    if(verbose) 
+                    {
+                        StampPrintf("WSPR> End Tx.");
+                    }
+                    itx_trigger = 0;
+                    PioDCOStop(pctx->_pTX->_p_oscillator);
                 }
             }
         }
         else
         {
-            itx_trigger = 0;
-            if(verbose) StampPrintf("WSPR> Passive TX slot.");
-            PioDCOStop(pctx->_pTX->_p_oscillator);
+            //itx_trigger = 0;
+            if(verbose && (secsIntoCurrentSlot == 0))
+            {
+                StampPrintf("WSPR> Passive TX slot %d",islot_modulo);
+            }
+            //PioDCOStop(pctx->_pTX->_p_oscillator);
         }
     }
 
