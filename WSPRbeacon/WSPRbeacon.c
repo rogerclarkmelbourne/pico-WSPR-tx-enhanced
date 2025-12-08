@@ -128,99 +128,100 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
 /// @param pctx Ptr to Context.
 /// @param verbose Whether stdio output is needed.
 /// @return 0 if OK, -1 if NO GPS received available
+
+
+uint32_t lastNmeaRmcCount = 0;
+uint32_t lastSkipSlotModuloDisplayed = 0;
+int itx_trigger = 0;
+
 int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int verbose)
 {
     assert_(pctx);
 
     datetime_t rtcDateTime;
-    uint64_t u64tmnow;
-    uint32_t is_GPS_active;
-    uint32_t is_GPS_override;
     uint64_t u64_GPS_last_age_sec;
-    uint32_t u32_unixtime_now;
     uint32_t isec_of_hour;
     uint32_t islot_number;
     uint32_t islot_modulo;
 
-
     if( pctx->_txSched._u8_tx_GPS_mandatory)
     {
-        //is_GPS_active = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u8_is_solution_active;
-        //is_GPS_override = pctx->_txSched._u8_tx_GPS_past_time == YES;
+        u64_GPS_last_age_sec = (GetUptime64() - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL;
+
+        lastNmeaRmcCount = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count; 
 
         isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
 
+        //printf("Sec = %d\n", isec_of_hour%60);
     }
     else
     {
         rtc_get_datetime(&rtcDateTime);
-        isec_of_hour = rtcDateTime.min * 60 + rtcDateTime.sec;
-        
+        isec_of_hour = rtcDateTime.min * 60 + rtcDateTime.sec;       
     }
 
     islot_number = (isec_of_hour + (initSlotOffset * 2 * MINUTE)) / (2 * MINUTE);
     islot_modulo = islot_number % pctx->_txSched._u8_tx_slot_skip;
 
-#if false    
-    if(is_GPS_active || (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last &&
-                         is_GPS_override && u64_GPS_last_age_sec < WSPR_MAX_GPS_DISCONNECT_TM))
-#endif                         
+#if true
+    if(pctx->_txSched._u8_tx_GPS_mandatory && u64_GPS_last_age_sec > WSPR_MAX_GPS_DISCONNECT_TM)
     {
-
-
-        static int itx_trigger = 0;
-
-        uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
-
-        if((ZERO == islot_modulo))
+        if (itx_trigger)
         {
-
-            if(!itx_trigger)
-            {
-                if (secsIntoCurrentSlot == 0)
-                {
-                    itx_trigger = 1;
-                    if(verbose) StampPrintf("WSPR> Start TX.");
-
-                    PioDCOStart(pctx->_pTX->_p_oscillator);
-                    WSPRbeaconCreatePacket(pctx);
-                    sleep_ms(100);
-                    WSPRbeaconSendPacket(pctx);
-                }
-#if false
-                else
-                {
-                   if(verbose) 
-                   {    
-                        StampPrintf("Can't start in the middle of an active slot %d", (2 * MINUTE) - secsIntoCurrentSlot); 
-                   }
-                }
+            itx_trigger = 0;
+            PioDCOStop(pctx->_pTX->_p_oscillator);
+            printf("GPS Timeout Tx shutdown\n");
+        }
+        
+        sleep_ms(1000);// delay to allow GPS to come back online
+        return -1; 
+    }
 #endif
-            }
-            else
+
+    uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
+
+    if((ZERO == islot_modulo))
+    {
+        if(!itx_trigger)
+        {
+            if (secsIntoCurrentSlot == 0)
             {
-                // WSPR Tx data only lasts  110.6 seconds, 
-                // and is supposed to start 1 second after the start of an even numbered minute
-                // So the osc can be safely stopped after 113 seconds 
-                if (secsIntoCurrentSlot == 113)
-                {
-                    if(verbose) 
-                    {
-                        StampPrintf("WSPR> End Tx.");
-                    }
-                    itx_trigger = 0;
-                    PioDCOStop(pctx->_pTX->_p_oscillator);
-                }
+                itx_trigger = 1;
+                PioDCOStart(pctx->_pTX->_p_oscillator);
+                WSPRbeaconCreatePacket(pctx);
+                sleep_ms(100);
+                WSPRbeaconSendPacket(pctx);
+                
+                printf("WSPR> Start TX.\n");
             }
         }
         else
         {
-            //itx_trigger = 0;
-            if(verbose && (secsIntoCurrentSlot == 0))
+            // WSPR Tx data only lasts  110.6 seconds, 
+            // and is supposed to start 1 second after the start of an even numbered minute
+            // So the osc can be safely stopped after 113 seconds 
+            if (secsIntoCurrentSlot >= 113)
             {
-                StampPrintf("WSPR> Passive TX slot %d",islot_modulo);
+                printf("WSPR> End Tx\n");
+                itx_trigger = 0;
+                PioDCOStop(pctx->_pTX->_p_oscillator);
             }
-            //PioDCOStop(pctx->_pTX->_p_oscillator);
+        }
+    }
+    else
+    {
+        if(verbose && (secsIntoCurrentSlot == 0) && lastSkipSlotModuloDisplayed != islot_modulo)
+        {
+            printf("WSPR> Passive TX slot %d\n",islot_modulo);
+            lastSkipSlotModuloDisplayed = islot_modulo; 
+        }
+
+        if (itx_trigger)
+        {
+            printf("Fallsafe Tx shutdown needed\n");
+            // Code should not get here. But this is what the original code did and its helpful as a failsafe
+            itx_trigger = 0;
+            PioDCOStop(pctx->_pTX->_p_oscillator);
         }
     }
 

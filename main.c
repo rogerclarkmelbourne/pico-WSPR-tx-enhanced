@@ -141,17 +141,15 @@ int main()
     {
         StampPrintf("GPS detected");
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
-        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count < 10)
+        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count < 5)
         {
-            StampPrintf("WSPR> Waiting for GPS receiver...");
+            StampPrintf("WSPR> Waiting for GPS receiver time data");
             sleep_ms(1000);
         }
+        StampPrintf("WSPR> GPS time received");
 
-        int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
-    
+        int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;   
         initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
-
-
     }
     else
     {
@@ -224,14 +222,25 @@ int main()
             }
         }
 #endif        
-        gpio_put(PICO_DEFAULT_LED_PIN, 1);
-        sleep_ms(100);
-        gpio_put(PICO_DEFAULT_LED_PIN, 0);
+
+        uint32_t msSinceBootM500 = to_ms_since_boot(get_absolute_time()) % 1000;
+        if (msSinceBootM500 == 0)
+        {
+            gpio_put(PICO_DEFAULT_LED_PIN, 1);
+        }
+        else
+        {
+            if (msSinceBootM500 == 500 )
+            {
+                gpio_put(PICO_DEFAULT_LED_PIN, 0);
+            }
+        }
+
 
 #if (defined(DEBUG) && false)
         if(0 == ++tick % 60)
             WSPRbeaconDumpContext(pWB);
 #endif
-        sleep_ms(900);
+        sleep_ms(10);
     }
 }
