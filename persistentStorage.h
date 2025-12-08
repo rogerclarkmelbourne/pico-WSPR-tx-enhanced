@@ -8,7 +8,7 @@
 
 #define MAX_KEY 64
 #define MAX_VAL 256
-#define NUM_BANDS 10
+#define NUM_BANDS 9
 
 extern const uint64_t  MAGIC_NUMBER ;
 extern const uint32_t  CURRENT_VERSION;

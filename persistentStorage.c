@@ -15,7 +15,7 @@ SettingsData settingsData;
 const uint32_t FLASH_TARGET_OFFSET = (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE);
 const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 
-const uint32_t bandNames[NUM_BANDS] = { 160, 80, 40, 30, 20, 17, 15, 12, 10, 6};
+const uint32_t bandNames[NUM_BANDS] = { 160, 80, 40, 30, 20, 17, 15, 12, 10};
 const uint32_t bandFrequencies[NUM_BANDS] = {
          1838000,
          3570000,
@@ -25,8 +25,7 @@ const uint32_t bandFrequencies[NUM_BANDS] = {
         18106000,
         21096000,
         24926000,
-        28126000,
-        50294400 
+        28126000
 };
 
 
@@ -96,7 +95,7 @@ void settingsReadFromFlash(void)
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator4, 0x00, 16);// completely erase
-        settingsData.slotSkip           =   2;
+        settingsData.slotSkip           =   1;// Every other slot
         settingsWriteToFlash();
     }
 }
@@ -236,7 +235,7 @@ void handleSettings(bool buttonIsPressed)
             {
                 if (strcmp("CALLSIGN", key) == 0)
                 {
-                    strcpy(settingsData.callsign, value);
+                    strncpy(settingsData.callsign, value, 16);
 
                     printf("\nSetting callsign to %s\n",settingsData.callsign);
 
@@ -246,7 +245,7 @@ void handleSettings(bool buttonIsPressed)
                 {
                     if (strcmp("LOCATOR", key) == 0)
                     {
-                        strcpy(settingsData.locator4, value);
+                        strncpy(settingsData.locator4, value, 16);
 
                         printf("\nSetting locator to %s\n",settingsData.locator4);
 
@@ -273,10 +272,18 @@ void handleSettings(bool buttonIsPressed)
                         {
                             if (strcmp("SLOTSKIP", key) == 0)
                             {
-                                settingsData.slotSkip = atoi(value);
+                                int slotSkip = atoi(value);
+                                if (slotSkip > 0 && slotSkip <= 100)
+                                {
+                                    settingsData.slotSkip = atoi(value);
 
-                                printf("\nSetting Slot skip to %d\n",settingsData.slotSkip);
-                                settingsAreDirty = true;
+                                    printf("\nSetting Slot skip to %d\n",settingsData.slotSkip);
+                                    settingsAreDirty = true;
+                                }
+                                else
+                                {
+                                    printf("\nERROR: Slot skip must be between 1 and 100 inclusive\n");
+                                }
                             }
                             else
                             {

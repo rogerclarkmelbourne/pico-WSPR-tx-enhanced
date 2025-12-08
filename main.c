@@ -119,7 +119,7 @@ int main()
     
     pWB->_txSched._u8_tx_GPS_mandatory  = false;
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
-    pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip;
+    pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
     multicore_launch_core1(Core1Entry);
     StampPrintf("RF oscillator started.");
@@ -149,7 +149,7 @@ int main()
 
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
     
-        initialSlotOffset = settingsData.slotSkip - (isec_of_hour / (2 * MINUTE)) - 1;
+        initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
     }
     else
     {
@@ -177,7 +177,7 @@ int main()
 
         rtc_set_datetime(&t);
 
-        initialSlotOffset = settingsData.slotSkip;
+        initialSlotOffset = (settingsData.slotSkip + 1);
     }
 
 
