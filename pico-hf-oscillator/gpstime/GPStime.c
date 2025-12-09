@@ -235,6 +235,8 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
 
     if(prmc)
     {
+
+
         ++pg->_time_data._u32_nmea_gprmc_count;
 
         uint64_t tm_fix = GetUptime64();
@@ -290,6 +292,8 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
             {
                 return -4;
             }
+
+            sprintf(pg->_time_data.lastRMCDateTime, "%s %s", prmc + u8ixcollector[8], prmc + u8ixcollector[0]);
 
             pg->_time_data._u32_utime_nmea_last = GPStime2UNIX(prmc + u8ixcollector[8], prmc + u8ixcollector[0]);
             pg->_time_data._u64_sysclk_nmea_last = tm_fix;

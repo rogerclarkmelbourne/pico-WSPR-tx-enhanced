@@ -90,7 +90,7 @@ WSPRbeaconContext *pWSPR;
 
 int main()
 {
-
+    sleep_ms(1000);
     InitPicoHW();
     rtc_init();
     gpio_init(BTN_PIN);
@@ -101,7 +101,7 @@ int main()
     PioDco DCO = {0};
 
     StampPrintf("\n");
-    StampPrintf("R2BDY Pico-WSPR-tx start.");
+
 
     handleSettings(gpio_get(BTN_PIN));
 
@@ -132,8 +132,9 @@ int main()
  #endif   
     assert_(DCO._pGPStime);
 
-    
-    sleep_ms(2000);// allow time for any GPS NMEA message
+
+   
+    sleep_ms(5000);// allow time for any GPS NMEA message
 
     uint32_t initialSlotOffset;
 
@@ -141,12 +142,13 @@ int main()
     {
         StampPrintf("GPS detected");
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
-        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count < 5)
+        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last == 0)
         {
             StampPrintf("WSPR> Waiting for GPS receiver time data");
             sleep_ms(1000);
         }
-        StampPrintf("WSPR> GPS time received");
+
+        printf("WSPR> GPS time received %s\n" , pWB->_pTX->_p_oscillator->_pGPStime->_time_data.lastRMCDateTime);
 
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;   
         initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
@@ -179,6 +181,7 @@ int main()
 
         initialSlotOffset = (settingsData.slotSkip + 1);
     }
+
 
 
     int tick = 0;

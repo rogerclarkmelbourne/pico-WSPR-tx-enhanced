@@ -98,6 +98,7 @@ typedef struct
     uint8_t _ix_last;                           /* An index of last write to sliding window. */
 
     int64_t _i32_freq_shift_ppb;                /* Calcd frequency shift, parts per billion. */
+    char lastRMCDateTime[256];
 
 } GPStimeData;
 
