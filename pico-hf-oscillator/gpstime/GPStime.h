@@ -75,6 +75,8 @@
 
 #define ASSERT_(x) assert_(x)
 
+extern volatile bool ppsTriggered;
+
 enum
 {
     eDtUpscale = 1000000,
@@ -108,7 +110,7 @@ typedef struct
     int _uart_baudrate;
     int _pps_gpio;
 
-    GPStimeData _time_data;
+    volatile GPStimeData _time_data;
 
     uint8_t _pbytebuff[256];
     uint8_t _u8_ixw;

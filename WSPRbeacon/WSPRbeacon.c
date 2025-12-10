@@ -120,6 +120,8 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
     memcpy(pctx->_pTX->_pbyte_buffer, pctx->_pu8_outbuf, WSPR_SYMBOL_COUNT);
     pctx->_pTX->_ix_input = WSPR_SYMBOL_COUNT;
 
+    TxChannelStart();
+
     return 0;
 }
 
@@ -133,10 +135,12 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
 uint32_t lastNmeaRmcCount = 0;
 uint32_t lastSkipSlotModuloDisplayed = 0;
 int itx_trigger = 0;
+uint32_t lastIntDisplayed = 0;
 
 int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int verbose)
 {
     assert_(pctx);
+    const bool debugPrint = false;
 
     datetime_t rtcDateTime;
     uint64_t u64_GPS_last_age_sec;
@@ -160,17 +164,20 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
         isec_of_hour = rtcDateTime.min * 60 + rtcDateTime.sec;       
     }
 
-    islot_number = (isec_of_hour + (initSlotOffset * 2 * MINUTE)) / (2 * MINUTE);
+    islot_number = (isec_of_hour  / (2 * MINUTE)) + initSlotOffset;
     islot_modulo = islot_number % pctx->_txSched._u8_tx_slot_skip;
 
 #if true
     if(pctx->_txSched._u8_tx_GPS_mandatory && u64_GPS_last_age_sec > WSPR_MAX_GPS_DISCONNECT_TM)
     {
+        if (debugPrint) printf("GPS Timeout Tx\n");
+
         if (itx_trigger)
         {
             itx_trigger = 0;
+            TxChannelStop();// Stop the modulator
             PioDCOStop(pctx->_pTX->_p_oscillator);
-            printf("GPS Timeout Tx shutdown\n");
+            if (debugPrint) printf("GPS Timeout Tx shutdown\n");
         }
         
         sleep_ms(1000);// delay to allow GPS to come back online
@@ -179,6 +186,16 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
 #endif
 
     uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
+    
+
+    if (lastIntDisplayed != secsIntoCurrentSlot)
+    {
+        lastIntDisplayed = secsIntoCurrentSlot;
+        if (debugPrint) printf("Secs of hour %d. Slot %d. Seconds %d. %s\n" ,                isec_of_hour, 
+                                                                             islot_modulo, 
+                                                                             secsIntoCurrentSlot, 
+                                                                             itx_trigger?"Transmitting":"Passive");
+    }
 
     if((ZERO == islot_modulo))
     {
@@ -188,8 +205,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             {
                 itx_trigger = 1;
                 PioDCOStart(pctx->_pTX->_p_oscillator);
-                WSPRbeaconCreatePacket(pctx);
-                sleep_ms(100);
+                //sleep_ms(100);
                 WSPRbeaconSendPacket(pctx);
                 
                 printf("WSPR> Start TX.\n");
@@ -202,26 +218,33 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             // So the osc can be safely stopped after 113 seconds 
             if (secsIntoCurrentSlot >= 113)
             {
+                TxChannelStop();// Stop the modulator
+                PioDCOStop(pctx->_pTX->_p_oscillator);
                 printf("WSPR> End Tx\n");
                 itx_trigger = 0;
-                PioDCOStop(pctx->_pTX->_p_oscillator);
             }
         }
     }
     else
     {
+        uint32_t secsToNextTx = ((pctx->_txSched._u8_tx_slot_skip - islot_number) * 2 * MINUTE) - secsIntoCurrentSlot; 
+
+        /*
         if(verbose && (secsIntoCurrentSlot == 0) && lastSkipSlotModuloDisplayed != islot_modulo)
         {
-            printf("WSPR> Passive TX slot %d\n",islot_modulo);
+            printf("WSPR> Passive slot. Next Tx in %d\n",islot_modulo);
             lastSkipSlotModuloDisplayed = islot_modulo; 
-        }
+        }*/
 
         if (itx_trigger)
         {
-            printf("Fallsafe Tx shutdown needed\n");
-            // Code should not get here. But this is what the original code did and its helpful as a failsafe
-            itx_trigger = 0;
+            TxChannelStop();// Stop the modulator
             PioDCOStop(pctx->_pTX->_p_oscillator);
+            itx_trigger = 0;
+
+            if (debugPrint) printf("Fallsafe Tx shutdown needed\n");
+            // Code should not get here. But this is what the original code did and its helpful as a failsafe
+
         }
     }
 

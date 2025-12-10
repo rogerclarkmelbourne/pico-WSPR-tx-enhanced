@@ -81,4 +81,8 @@ int TxChannelPush(TxChannelContext *pctx, uint8_t *psrc, int n);
 int TxChannelPop(TxChannelContext *pctx, uint8_t *pdst);
 void TxChannelClear(TxChannelContext *pctx);
 
+void TxChannelStart(void);
+void TxChannelStop(void);
+
+
 #endif

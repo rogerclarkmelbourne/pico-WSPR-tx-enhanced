@@ -100,12 +100,26 @@ TxChannelContext *TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alar
     hw_set_bits(&timer_hw->inte, 1U << p->_timer_alarm_num);
     irq_set_exclusive_handler(TIMER_IRQ_0, TxChannelISR);
     irq_set_priority(TIMER_IRQ_0, 0x00);
-    irq_set_enabled(TIMER_IRQ_0, true);
 
-    p->_tm_future_call = timer_hw->timerawl + 20000LL;
-    timer_hw->alarm[p->_timer_alarm_num] = (uint32_t)p->_tm_future_call;
+
+    //TxChannelStart()
 
     return p;
+}
+
+void TxChannelStart(void)
+{    
+    irq_set_enabled(TIMER_IRQ_0, true);
+    spTX->_tm_future_call = timer_hw->timerawl + 20000LL;
+    timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
+}
+
+void TxChannelStop(void)
+{    
+    irq_set_enabled(TIMER_IRQ_0, false);
+
+    // Disable ALARM0 so it doesn't trigger
+    timer_hw->alarm[0] = 0;
 }
 
 /// @brief Gets a count of bytes to send.

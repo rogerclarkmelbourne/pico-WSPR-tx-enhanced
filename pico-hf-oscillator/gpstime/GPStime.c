@@ -60,8 +60,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "GPStime.h"
 
+GPStimeContext gTimeContext;
+
 static GPStimeContext *spGPStimeContext = NULL;
-static GPStimeData *spGPStimeData = NULL;
+volatile static GPStimeData *spGPStimeData = NULL;
 
 /// @brief Initializes GPS time module Context.
 /// @param uart_id UART id to which GPS receiver is connected, 0 OR 1.
@@ -119,13 +121,16 @@ void GPStimeDestroy(GPStimeContext **pp)
     *pp = NULL;
 }
 
+volatile bool ppsTriggered = false;
+
 /// @brief The PPS interrupt service subroutine.
 /// @param  gpio The GPIO pin of Pico which is connected to PPS output of GPS rec.
 void RAM (GPStimePPScallback)(uint gpio, uint32_t events)
 {   
-    const uint64_t tm64 = GetUptime64();
+    ppsTriggered = true;// used by the foreground loop
     if(spGPStimeData)
-    {
+    {    
+        const uint64_t tm64 = GetUptime64();
         spGPStimeData->_u64_sysclk_pps_last = tm64;   
         ++spGPStimeData->_ix_last;
         spGPStimeData->_ix_last %= eSlidingLen;
@@ -293,7 +298,7 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
                 return -4;
             }
 
-            sprintf(pg->_time_data.lastRMCDateTime, "%s %s", prmc + u8ixcollector[8], prmc + u8ixcollector[0]);
+            sprintf((char *)pg->_time_data.lastRMCDateTime, "%s %s", (char *)(prmc + u8ixcollector[8]), (char *)(prmc + u8ixcollector[0]));
 
             pg->_time_data._u32_utime_nmea_last = GPStime2UNIX(prmc + u8ixcollector[8], prmc + u8ixcollector[0]);
             pg->_time_data._u64_sysclk_nmea_last = tm_fix;

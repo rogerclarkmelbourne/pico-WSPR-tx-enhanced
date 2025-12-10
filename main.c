@@ -88,6 +88,17 @@
 WSPRbeaconContext *pWSPR;
 
 
+int i=0;
+bool timer_callback(repeating_timer_t *rt);
+
+bool timer_callback(__unused repeating_timer_t *rt)
+ {
+
+    ppsTriggered = true;
+    //printf("timer_callback %d\n",i);
+    return true; // keep repeating
+}
+
 int main()
 {
     sleep_ms(1000);
@@ -121,6 +132,9 @@ int main()
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
+    // Location, callsign and power data does not change, so we only need to create it once.
+    WSPRbeaconCreatePacket(pWB);
+
     multicore_launch_core1(Core1Entry);
     StampPrintf("RF oscillator started.");
 
@@ -132,10 +146,12 @@ int main()
  #endif   
     assert_(DCO._pGPStime);
 
+    repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
 
-   
-    sleep_ms(5000);// allow time for any GPS NMEA message
 
+   // while (true) { tight_loop_contents();  }
+
+    sleep_ms(2000);
     uint32_t initialSlotOffset;
 
     if (DCO._pGPStime->GpsNmeaReceived)
@@ -178,6 +194,12 @@ int main()
             };   
 
         rtc_set_datetime(&t);
+        const int hz = 1;// once per second
+
+        if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &timer))
+        {
+            printf("Failed to add timer\n");
+        }
 
         initialSlotOffset = (settingsData.slotSkip + 1);
     }
@@ -200,7 +222,12 @@ int main()
         */
        
         //if(pWB->_txSched._u8_tx_GPS_mandatory)
+        while(!ppsTriggered)
         {
+            tight_loop_contents();
+        }
+        {
+            ppsTriggered = false;
             WSPRbeaconTxScheduler(pWB, initialSlotOffset, YES);
         }
 #if false        
@@ -227,13 +254,13 @@ int main()
 #endif        
 
         uint32_t msSinceBootM500 = to_ms_since_boot(get_absolute_time()) % 1000;
-        if (msSinceBootM500 == 0)
+        if (msSinceBootM500 < 500)
         {
             gpio_put(PICO_DEFAULT_LED_PIN, 1);
         }
         else
         {
-            if (msSinceBootM500 == 500 )
+            if (msSinceBootM500 >= 500 )
             {
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
