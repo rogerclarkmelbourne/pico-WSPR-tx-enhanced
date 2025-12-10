@@ -119,7 +119,7 @@ void TxChannelStop(void)
     irq_set_enabled(TIMER_IRQ_0, false);
 
     // Disable ALARM0 so it doesn't trigger
-    timer_hw->alarm[0] = 0;
+    timer_hw->alarm[spTX->_timer_alarm_num] = 0;
 }
 
 /// @brief Gets a count of bytes to send.
