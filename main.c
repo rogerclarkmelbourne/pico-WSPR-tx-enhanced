@@ -189,18 +189,20 @@ int main()
                 .day   = 01,
                 .dotw  = 0, 
                 .hour  = 0,
-                .min   = 0,//settingsData.slotSkip,// force immediate Tx 
-                .sec   = 00
+                .min   = 59,
+                .sec   = 58
             };   
-
         rtc_set_datetime(&t);
+        sleep_ms(100);
+
+#if false
         const int hz = 1;// once per second
 
         if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &timer))
         {
             printf("Failed to add timer\n");
         }
-
+#endif
         initialSlotOffset = (settingsData.slotSkip + 1);
     }
 
@@ -221,14 +223,17 @@ int main()
         }
         */
        
-        //if(pWB->_txSched._u8_tx_GPS_mandatory)
-        while(!ppsTriggered)
+
+        if (DCO._pGPStime->GpsNmeaReceived)
         {
-            tight_loop_contents();
+            while(!ppsTriggered)
+            {
+                tight_loop_contents();
+            }
         }
         {
             ppsTriggered = false;
-            WSPRbeaconTxScheduler(pWB, initialSlotOffset, YES);
+            WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
         }
 #if false        
         else

@@ -110,7 +110,7 @@ TxChannelContext *TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alar
 void TxChannelStart(void)
 {    
     irq_set_enabled(TIMER_IRQ_0, true);
-    spTX->_tm_future_call = timer_hw->timerawl + 20000LL;
+    spTX->_tm_future_call = timer_hw->timerawl;
     timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
 }
 

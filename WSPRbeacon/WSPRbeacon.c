@@ -140,7 +140,7 @@ uint32_t lastIntDisplayed = 0;
 int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int verbose)
 {
     assert_(pctx);
-    const bool debugPrint = false;
+    bool debugPrint = verbose;
 
     datetime_t rtcDateTime;
     uint64_t u64_GPS_last_age_sec;
@@ -205,7 +205,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             {
                 itx_trigger = 1;
                 PioDCOStart(pctx->_pTX->_p_oscillator);
-                //sleep_ms(100);
+                sleep_ms(300);
                 WSPRbeaconSendPacket(pctx);
                 
                 printf("WSPR> Start TX.\n");
