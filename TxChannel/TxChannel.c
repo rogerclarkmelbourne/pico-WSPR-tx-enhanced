@@ -124,6 +124,7 @@ void TxChannelStop(void)
     irq_set_enabled(TIMER_IRQ_0, false);
     timer_hw->alarm[spTX->_timer_alarm_num] = 0;    // Disable ALARM0 so it doesn't trigger
     PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_dialfreqhz, 0);// Reset the freq.
+    gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn off the LED
 }
 
 /// @brief Gets a count of bytes to send.

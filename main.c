@@ -140,6 +140,7 @@ int main()
 #if true
     DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
  #else
+ // Testing for button mode when a GPS is attached
      DCO._pGPStime = calloc(1, sizeof(GPStimeContext));
      DCO._pGPStime->GpsNmeaReceived = false;
  #endif   
@@ -147,20 +148,24 @@ int main()
 
     repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
 
-
-   // while (true) { tight_loop_contents();  }
-
-    sleep_ms(5000);// GPS should send data at least once per second. 
+    sleep_ms(2000);// GPS should send data at least once per second. 
     uint32_t initialSlotOffset;
 
     if (DCO._pGPStime->GpsNmeaReceived)
     {
-        for(int i=0;i<5;i++)
-        {
-            StampPrintf("GPS detected");
-            sleep_ms(1000);
-        }
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
+
+        // wait for 3 PPS pulses to guarantee stability
+        for (int i=0;i<3;i++)
+        {
+            while(!ppsTriggered)
+            {
+                tight_loop_contents();
+            }
+            ppsTriggered = false;
+        }
+
+        // should definietly have RMC data if there has been PPS
         while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last == 0)
         {
             StampPrintf("WSPR> Waiting for GPS receiver time data");
@@ -227,7 +232,6 @@ int main()
             }
         }
         */
-       
 
         while(!ppsTriggered)
         {
