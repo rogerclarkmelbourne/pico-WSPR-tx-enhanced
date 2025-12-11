@@ -235,28 +235,7 @@ int main()
             ppsTriggered = false;
             WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
         }
-#if false        
-        else
-        {
-            StampPrintf("Omitting GPS solution, start tx now.");
-            PioDCOStart(pWB->_pTX->_p_oscillator);
-            WSPRbeaconCreatePacket(pWB);
-            sleep_ms(100);
-            WSPRbeaconSendPacket(pWB);
-            StampPrintf("The system will be halted when tx is completed.");
-            for(;;)
-            {
-                if(!TxChannelPending(pWB->_pTX))
-                {
-                    PioDCOStop(pWB->_pTX->_p_oscillator);
-                    StampPrintf("System halted.");
-                }
-                gpio_put(PICO_DEFAULT_LED_PIN, 1);
-                sleep_ms(500);
-                gpio_put(PICO_DEFAULT_LED_PIN, 0);
-            }
-        }
-#endif        
+
 
         uint32_t msSinceBootM500 = to_ms_since_boot(get_absolute_time()) % 1000;
         if (msSinceBootM500 < 500)
