@@ -101,25 +101,29 @@ TxChannelContext *TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alar
     irq_set_exclusive_handler(TIMER_IRQ_0, TxChannelISR);
     irq_set_priority(TIMER_IRQ_0, 0x00);
 
-
-    //TxChannelStart()
-
     return p;
 }
 
 void TxChannelStart(void)
 {    
     irq_set_enabled(TIMER_IRQ_0, true);
-    spTX->_tm_future_call = timer_hw->timerawl;
+    spTX->_tm_future_call = timer_hw->timerawl + 140000UL;// VK3KYY Not sure why a delay is needed before the first symbol is transmitted
     timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
+
+   // TxChannelISR();// Set the freq of the first symbol to be sent.
+
+    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_dialfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
+    PioDCOStart(spTX->_p_oscillator);// turn on the oscillator
 }
 
 void TxChannelStop(void)
-{    
-    irq_set_enabled(TIMER_IRQ_0, false);
+{   
+    PioDCOStop(spTX->_p_oscillator); // Turn off the oscillator
 
-    // Disable ALARM0 so it doesn't trigger
-    timer_hw->alarm[spTX->_timer_alarm_num] = 0;
+    // Stop sending data.
+    irq_set_enabled(TIMER_IRQ_0, false);
+    timer_hw->alarm[spTX->_timer_alarm_num] = 0;    // Disable ALARM0 so it doesn't trigger
+    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_dialfreqhz, 0);// Reset the freq.
 }
 
 /// @brief Gets a count of bytes to send.

@@ -120,6 +120,8 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
     memcpy(pctx->_pTX->_pbyte_buffer, pctx->_pu8_outbuf, WSPR_SYMBOL_COUNT);
     pctx->_pTX->_ix_input = WSPR_SYMBOL_COUNT;
 
+
+
     TxChannelStart();
 
     return 0;
@@ -176,7 +178,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
         {
             itx_trigger = 0;
             TxChannelStop();// Stop the modulator
-            PioDCOStop(pctx->_pTX->_p_oscillator);
+
             if (debugPrint) printf("GPS Timeout Tx shutdown\n");
         }
         
@@ -204,10 +206,8 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             if (secsIntoCurrentSlot == 0)
             {
                 itx_trigger = 1;
-                PioDCOStart(pctx->_pTX->_p_oscillator);
-                sleep_ms(300);
                 WSPRbeaconSendPacket(pctx);
-                
+               
                 printf("WSPR> Start TX.\n");
             }
         }
@@ -219,7 +219,6 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             if (secsIntoCurrentSlot >= 113)
             {
                 TxChannelStop();// Stop the modulator
-                PioDCOStop(pctx->_pTX->_p_oscillator);
                 printf("WSPR> End Tx\n");
                 itx_trigger = 0;
             }
@@ -239,7 +238,6 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
         if (itx_trigger)
         {
             TxChannelStop();// Stop the modulator
-            PioDCOStop(pctx->_pTX->_p_oscillator);
             itx_trigger = 0;
 
             if (debugPrint) printf("Fallsafe Tx shutdown needed\n");

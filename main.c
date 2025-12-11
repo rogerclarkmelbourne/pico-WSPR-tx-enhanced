@@ -101,7 +101,6 @@ bool timer_callback(__unused repeating_timer_t *rt)
 
 int main()
 {
-    sleep_ms(1000);
     InitPicoHW();
     rtc_init();
     gpio_init(BTN_PIN);
@@ -151,12 +150,16 @@ int main()
 
    // while (true) { tight_loop_contents();  }
 
-    sleep_ms(2000);
+    sleep_ms(5000);// GPS should send data at least once per second. 
     uint32_t initialSlotOffset;
 
     if (DCO._pGPStime->GpsNmeaReceived)
     {
-        StampPrintf("GPS detected");
+        for(int i=0;i<5;i++)
+        {
+            StampPrintf("GPS detected");
+            sleep_ms(1000);
+        }
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
         while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last == 0)
         {
@@ -190,20 +193,22 @@ int main()
                 .dotw  = 0, 
                 .hour  = 0,
                 .min   = 59,
-                .sec   = 58
+                .sec   = 59
             };   
         rtc_set_datetime(&t);
-        sleep_ms(100);
 
-#if false
+        initialSlotOffset = (settingsData.slotSkip + 1);
+        ppsTriggered = true;
+
         const int hz = 1;// once per second
 
         if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &timer))
         {
-            printf("Failed to add timer\n");
+            while(true)
+            {
+                printf("Failed to add timer\n");
+            }
         }
-#endif
-        initialSlotOffset = (settingsData.slotSkip + 1);
     }
 
 
@@ -224,19 +229,15 @@ int main()
         */
        
 
-        if (DCO._pGPStime->GpsNmeaReceived)
+        while(!ppsTriggered)
         {
-            while(!ppsTriggered)
-            {
-                tight_loop_contents();
-            }
-        }
-        {
-            ppsTriggered = false;
-            WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
+            tight_loop_contents();
         }
 
+        WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
+        ppsTriggered = false;
 
+#if false
         uint32_t msSinceBootM500 = to_ms_since_boot(get_absolute_time()) % 1000;
         if (msSinceBootM500 < 500)
         {
@@ -249,12 +250,12 @@ int main()
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
         }
-
+#endif
 
 #if (defined(DEBUG) && false)
         if(0 == ++tick % 60)
             WSPRbeaconDumpContext(pWB);
 #endif
-        sleep_ms(10);
+        //sleep_ms(10);
     }
 }
