@@ -65,17 +65,20 @@ static void __not_in_flash_func (TxChannelISR)(void)
 
         PioDCOSetFreq(pDCO, spTX->_u32_Txfreqhz, 
                       (uint32_t)byte * WSPR_FREQ_STEP_MILHZ - 2 * i32_compensation_millis);
+
+                         spTX->_tm_future_call += spTX->_bit_period_us;
+
+        hw_clear_bits(&timer_hw->intr, 1U<<spTX->_timer_alarm_num);
+        timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
+
+        /* LED debug signal */
+        static int tick = 0;
+        gpio_put(PICO_DEFAULT_LED_PIN, ++tick & 1);
     }
-
-    spTX->_tm_future_call += spTX->_bit_period_us;
-
-EXIT:
-    hw_clear_bits(&timer_hw->intr, 1U<<spTX->_timer_alarm_num);
-    timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
-
-    /* LED debug signal */
-    static int tick = 0;
-    gpio_put(PICO_DEFAULT_LED_PIN, ++tick & 1);
+    else
+    {
+        TxChannelStop();
+    }
 }
 
 /// @brief Initializes a TxChannel context. Starts ISR.

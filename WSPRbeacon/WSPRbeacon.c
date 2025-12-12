@@ -155,6 +155,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
 
     if( pctx->_txSched._u8_tx_GPS_mandatory)
     {
+        // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
         isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;
     }
     else
@@ -188,13 +189,10 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
         }
         else
         {
-            // WSPR Tx data only lasts  110.6 seconds, 
-            // and is supposed to start 1 second after the start of an even numbered minute
-            // So the osc can be safely stopped after 115 seconds 
-            if (secsIntoCurrentSlot >= 115)
+            // Check if Tx has finished and Osc has been turned off
+            if (!pctx->_pTX->_p_oscillator->_is_enabled)
             {
-                TxChannelStop();// Stop the modulator
-                printf("WSPR> End Tx\n");
+                printf("WSPR> End Tx. @ %d secs\n",secsIntoCurrentSlot);
 
                 // Set the freq of the next transmission now.
                 const int FREQ_STEP_SIZE = 5;// Hz
@@ -209,24 +207,8 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
 
                 printf("Offset frequency %d Hz\n",offset);
                 TxChannelSetOffsetFrequency(offset);
-                
+
                 itx_trigger = 0;
-            }
-        }
-    }
-    else
-    {
-        //uint32_t secsToNextTx = ((pctx->_txSched._u8_tx_slot_skip - islot_number) * 2 * MINUTE) - secsIntoCurrentSlot; 
-
-        if (itx_trigger)
-        {
-            // Code should not get here. But this is what the original code did and its helpful as a failsafe
-            TxChannelStop();
-            itx_trigger = 0;
-
-            if (debugPrint)
-            {
-                printf("Fallsafe Tx shutdown needed\n");
             }
         }
     }
