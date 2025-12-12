@@ -73,7 +73,7 @@ void Core1Entry()
     assert_(0 == PioDCOInit(p, pWSPR->_pTX->_i_tx_gpio, clkhz));
 
     /* Set initial freq. */
-    assert_(0 == PioDCOSetFreq(p, pWSPR->_pTX->_u32_dialfreqhz, 0U));
+    assert_(0 == PioDCOSetFreq(p, pWSPR->_pTX->_u32_Txfreqhz, 0U));
 
     /* Run the main DCO algorithm. It spins forever. */
     PioDCOWorker2(p);

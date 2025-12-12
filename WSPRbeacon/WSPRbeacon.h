@@ -84,7 +84,7 @@ typedef struct
 } WSPRbeaconContext;
 
 WSPRbeaconContext *WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
-                                  PioDco *pdco, uint32_t dial_freq_hz, uint32_t shift_freq_hz,
+                                  PioDco *pdco, uint32_t dial_freq_hz, int32_t shift_freq_hz,
                                   int gpio);
 void WSPRbeaconSetDialFreq(WSPRbeaconContext *pctx, uint32_t freq_hz);
 int WSPRbeaconCreatePacket(WSPRbeaconContext *pctx);

@@ -49,6 +49,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "TxChannel.h"
 
+
 static TxChannelContext *spTX = NULL;
 static void __not_in_flash_func (TxChannelISR)(void)
 {
@@ -60,9 +61,9 @@ static void __not_in_flash_func (TxChannelISR)(void)
     {
         const int32_t i32_compensation_millis = 
             PioDCOGetFreqShiftMilliHertz(spTX->_p_oscillator, 
-                                         (uint64_t)(spTX->_u32_dialfreqhz * 1000LL));
+                                         (uint64_t)(spTX->_u32_Txfreqhz * 1000LL));
 
-        PioDCOSetFreq(pDCO, spTX->_u32_dialfreqhz, 
+        PioDCOSetFreq(pDCO, spTX->_u32_Txfreqhz, 
                       (uint32_t)byte * WSPR_FREQ_STEP_MILHZ - 2 * i32_compensation_millis);
     }
 
@@ -104,6 +105,22 @@ TxChannelContext *TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alar
     return p;
 }
 
+void TxChannelSetFrequency(uint32_t dialFreq, uint32_t offsetFreq)
+{
+    spTX->_u32_dialfreqhz = dialFreq;
+    spTX->_u32_offsetfreqhz = offsetFreq;
+    spTX->_u32_Txfreqhz =  spTX->_u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + spTX->_u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
+    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the freq.
+
+}
+
+void TxChannelSetOffsetFrequency(uint32_t offsetFreq)
+{
+    spTX->_u32_offsetfreqhz = offsetFreq;
+    spTX->_u32_Txfreqhz =  spTX->_u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + spTX->_u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
+    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the freq.
+}
+
 void TxChannelStart(void)
 {    
     irq_set_enabled(TIMER_IRQ_0, true);
@@ -112,7 +129,7 @@ void TxChannelStart(void)
 
    // TxChannelISR();// Set the freq of the first symbol to be sent.
 
-    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_dialfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
+    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
     PioDCOStart(spTX->_p_oscillator);// turn on the oscillator
 }
 
@@ -123,7 +140,7 @@ void TxChannelStop(void)
     // Stop sending data.
     irq_set_enabled(TIMER_IRQ_0, false);
     timer_hw->alarm[spTX->_timer_alarm_num] = 0;    // Disable ALARM0 so it doesn't trigger
-    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_dialfreqhz, 0);// Reset the freq.
+    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the freq.
     gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn off the LED
 }
 

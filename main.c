@@ -120,8 +120,8 @@ int main()
         settingsData.locator4,/* the default QTH locator if GPS isn't used. */
         12,             /* Tx power, dbm. */
         &DCO,           /* the PioDCO object. */
-        bandFrequencies[settingsData.bandIndex] + ((bandFrequencies[settingsData.bandIndex] / 1E6) * settingsData.freqCalibrationPPM),
-        55UL,           /* the carrier freq. shift relative to dial freq. */
+        bandFrequencies[settingsData.bandIndex] + ((bandFrequencies[settingsData.bandIndex] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
+        0,           /* the carrier freq. centre freq of the band */
         RFOUT_PIN       /* RF output GPIO pin. */
         );
     assert_(pWB);
@@ -156,8 +156,9 @@ int main()
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
 
         // wait for 3 PPS pulses to guarantee stability
-        for (int i=0;i<3;i++)
+        for (int i=0;i<10;i++)
         {
+            printf("PPS Wait %d\n",i);
             while(!ppsTriggered)
             {
                 tight_loop_contents();
@@ -168,7 +169,7 @@ int main()
         // should definietly have RMC data if there has been PPS
         while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last == 0)
         {
-            StampPrintf("WSPR> Waiting for GPS receiver time data");
+            printf("Waiting for GPS receiver time data\n");
             sleep_ms(1000);
         }
 
@@ -216,6 +217,9 @@ int main()
         }
     }
 
+    srand(get_absolute_time());
+
+    
 
 
     int tick = 0;
@@ -237,7 +241,6 @@ int main()
         {
             tight_loop_contents();
         }
-
         WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
         ppsTriggered = false;
 

@@ -53,6 +53,8 @@
 #include <WSPRutility.h>
 #include <maidenhead.h>
 
+int lastOffsetFreq = 0;
+
 /// @brief Initializes a new WSPR beacon context.
 /// @param pcallsign HAM radio callsign, 12 chr max.
 /// @param pgridsquare Maidenhead locator, 7 chr max.
@@ -63,7 +65,7 @@
 /// @param gpio Pico's GPIO pin of RF output.
 /// @return Ptr to the new context.
 WSPRbeaconContext *WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
-                                  PioDco *pdco, uint32_t dial_freq_hz, uint32_t shift_freq_hz,
+                                  PioDco *pdco, uint32_t dial_freq_hz, int32_t shift_freq_hz,
                                   int gpio)
 {
     assert_(pcallsign);
@@ -79,7 +81,9 @@ WSPRbeaconContext *WSPRbeaconInit(const char *pcallsign, const char *pgridsquare
 
     p->_pTX = TxChannelInit(682667, 0, pdco);
     assert_(p->_pTX);
-    p->_pTX->_u32_dialfreqhz = dial_freq_hz + shift_freq_hz;
+
+    TxChannelSetFrequency(dial_freq_hz, shift_freq_hz);
+
     p->_pTX->_i_tx_gpio = gpio;
 
     return p;
@@ -91,7 +95,7 @@ WSPRbeaconContext *WSPRbeaconInit(const char *pcallsign, const char *pgridsquare
 void WSPRbeaconSetDialFreq(WSPRbeaconContext *pctx, uint32_t freq_hz)
 {
     assert_(pctx);
-    pctx->_pTX->_u32_dialfreqhz = freq_hz;
+    pctx->_pTX->_u32_Txfreqhz = freq_hz;
 }
 
 /// @brief Constructs a new WSPR packet using the data available.
@@ -113,7 +117,7 @@ int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
 {
     assert_(pctx);
     assert_(pctx->_pTX);
-    assert_(pctx->_pTX->_u32_dialfreqhz > 500 * kHz);
+    assert_(pctx->_pTX->_u32_Txfreqhz > 500 * kHz);
 
     TxChannelClear(pctx->_pTX);
 
@@ -206,6 +210,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             if (secsIntoCurrentSlot == 0)
             {
                 itx_trigger = 1;
+
                 WSPRbeaconSendPacket(pctx);
                
                 printf("WSPR> Start TX.\n");
@@ -220,6 +225,20 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             {
                 TxChannelStop();// Stop the modulator
                 printf("WSPR> End Tx\n");
+
+                // Set the freq of the next transmission now.
+                const int rangeIn10HzSteps = WSPR_FREQ_RANGE_HZ / 10;
+                int r,offset;
+                do
+                {
+                    r = (rand() % (WSPR_FREQ_RANGE_HZ/10)) - (rangeIn10HzSteps/2);
+                    offset = r * 10;
+                } while (lastOffsetFreq == offset);
+                lastOffsetFreq = offset;
+
+                printf("Offset frequency %d Hz\n",offset);
+                TxChannelSetOffsetFrequency(offset);
+                
                 itx_trigger = 0;
             }
         }
@@ -264,7 +283,7 @@ void WSPRbeaconDumpContext(const WSPRbeaconContext *pctx)
     StampPrintf("=TxChannelContext=");
     StampPrintf("ftc:%llu", pctx->_pTX->_tm_future_call);
     StampPrintf("ixi:%u", pctx->_pTX->_ix_input);
-    StampPrintf("dfq:%lu", pctx->_pTX->_u32_dialfreqhz);
+    StampPrintf("dfq:%lu", pctx->_pTX->_u32_Txfreqhz);
     StampPrintf("gpo:%u", pctx->_pTX->_i_tx_gpio);
 
     GPStimeContext *pGPS = pctx->_pTX->_p_oscillator->_pGPStime;

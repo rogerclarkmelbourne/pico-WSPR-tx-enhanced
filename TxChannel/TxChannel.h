@@ -57,6 +57,9 @@
 #include "../pico-hf-oscillator/lib/assert.h"
 #include <piodco.h>
 
+// Signals are always within a 200Hz frequench range , but modulation is 6Hz wide and allow for inaccurate crystals on the Pico
+#define WSPR_FREQ_RANGE_HZ  180
+
 typedef struct
 {
     uint64_t _tm_future_call;
@@ -68,7 +71,10 @@ typedef struct
     uint8_t _pbyte_buffer[256];
 
     PioDco *_p_oscillator;
+    uint32_t _u32_Txfreqhz;    
     uint32_t _u32_dialfreqhz;
+    uint32_t _u32_offsetfreqhz;
+
     int _i_tx_gpio;
 
 } TxChannelContext;
@@ -83,6 +89,8 @@ void TxChannelClear(TxChannelContext *pctx);
 
 void TxChannelStart(void);
 void TxChannelStop(void);
+void TxChannelSetFrequency(uint32_t dialFreq, uint32_t offsetFreq);
+void TxChannelSetOffsetFrequency(uint32_t offsetFreq);
 
 
 #endif
