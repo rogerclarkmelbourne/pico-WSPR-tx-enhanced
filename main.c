@@ -118,7 +118,7 @@ int main()
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
         settingsData.locator4,/* the default QTH locator if GPS isn't used. */
-        12,             /* Tx power, dbm. */
+        17,             /* Tx power, dbm. */
         &DCO,           /* the PioDCO object. */
         bandFrequencies[settingsData.bandIndex] + ((bandFrequencies[settingsData.bandIndex] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
         0,           /* the carrier freq. centre freq of the band */
@@ -131,11 +131,14 @@ int main()
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
-    // Location, callsign and power data does not change, so we only need to create it once.
-    WSPRbeaconCreatePacket(pWB);
+
 
     multicore_launch_core1(Core1Entry);
     StampPrintf("RF oscillator started.");
+
+
+    // Location, callsign and power data does not change, so we only need to create it once.
+    WSPRbeaconCreatePacket(pWB);
 
 #if true
     DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
@@ -150,18 +153,24 @@ int main()
 
     sleep_ms(2000);// GPS should send data at least once per second. 
     uint32_t initialSlotOffset;
+    int messageCounter = 0;
 
     if (DCO._pGPStime->GpsNmeaReceived)
     {
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
-
+        
+     
         // wait for 3 PPS pulses to guarantee stability
         for (int i=0;i<10;i++)
         {
-            printf("PPS Wait %d\n",i);
             while(!ppsTriggered)
             {
-                tight_loop_contents();
+                messageCounter++;
+                if ((messageCounter % 1000) == 0)
+                {
+                    printf("PPS Wait.....  %d\n",10-i);
+                }
+                sleep_ms(1);
             }
             ppsTriggered = false;
         }
@@ -181,7 +190,7 @@ int main()
     else
     {
         // block waiting for 
-        int messageCounter = 0;
+        
         while(!gpio_get(BTN_PIN))
         {
             sleep_ms(1);
