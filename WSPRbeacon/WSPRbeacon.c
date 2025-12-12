@@ -227,12 +227,13 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
                 printf("WSPR> End Tx\n");
 
                 // Set the freq of the next transmission now.
-                const int rangeIn10HzSteps = WSPR_FREQ_RANGE_HZ / 10;
+                const int FREQ_STEP_SIZE = 5;// Hz
+                const int rangeInHzSteps = WSPR_FREQ_RANGE_HZ / FREQ_STEP_SIZE;
                 int r,offset;
                 do
                 {
-                    r = (rand() % (WSPR_FREQ_RANGE_HZ/10)) - (rangeIn10HzSteps/2);
-                    offset = r * 10;
+                    r = (rand() % rangeInHzSteps) - (rangeInHzSteps/2);
+                    offset = r * FREQ_STEP_SIZE;
                 } while (lastOffsetFreq == offset);
                 lastOffsetFreq = offset;
 
