@@ -69,8 +69,8 @@
 
 #include "hardware/rtc.h"
 #include "pico/util/datetime.h"
-
 #include "persistentStorage.h"
+#include "hardware/watchdog.h"
 
 
 #define CONFIG_GPS_SOLUTION_IS_MANDATORY NO
@@ -228,11 +228,9 @@ int main()
 
     srand(get_absolute_time());
 
-    
-
-
+    watchdog_enable(2000, 1);
     int tick = 0;
-    for(;;)
+    while(true)
     {
         /*
         if(WSPRbeaconIsGPSsolutionActive(pWB))
@@ -252,6 +250,7 @@ int main()
         }
         WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
         ppsTriggered = false;
+        watchdog_update();
 
 #if false
         uint32_t msSinceBootM500 = to_ms_since_boot(get_absolute_time()) % 1000;
