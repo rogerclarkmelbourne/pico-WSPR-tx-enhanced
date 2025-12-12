@@ -149,17 +149,12 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     bool debugPrint = verbose;
 
     datetime_t rtcDateTime;
-    uint64_t u64_GPS_last_age_sec;
     uint32_t isec_of_hour;
     uint32_t islot_number;
     uint32_t islot_modulo;
 
     if( pctx->_txSched._u8_tx_GPS_mandatory)
     {
-        u64_GPS_last_age_sec = (GetUptime64() - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL;
-
-        lastNmeaRmcCount = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_nmea_gprmc_count; 
-
         isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
 
         //printf("Sec = %d\n", isec_of_hour%60);
@@ -173,37 +168,14 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     islot_number = (isec_of_hour  / (2 * MINUTE)) + initSlotOffset;
     islot_modulo = islot_number % pctx->_txSched._u8_tx_slot_skip;
 
-#if true
-    if(pctx->_txSched._u8_tx_GPS_mandatory && u64_GPS_last_age_sec > WSPR_MAX_GPS_DISCONNECT_TM)
-    {
-        if (debugPrint) printf("GPS Timeout Tx\n");
-
-        if (itx_trigger)
-        {
-            itx_trigger = 0;
-            TxChannelStop();// Stop the modulator
-
-            if (debugPrint) printf("GPS Timeout Tx shutdown\n");
-        }
-        
-        sleep_ms(1000);// delay to allow GPS to come back online
-        return -1; 
-    }
-#endif
-
     uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
     
-
-    if (lastIntDisplayed != secsIntoCurrentSlot)
+    if (debugPrint)
     {
-        lastIntDisplayed = secsIntoCurrentSlot;
-        if (debugPrint) printf("Secs of hour %d. Slot %d. Seconds %d. %s\n" ,                isec_of_hour, 
-                                                                             islot_modulo, 
-                                                                             secsIntoCurrentSlot, 
-                                                                             itx_trigger?"Transmitting":"Passive");
+            printf("Slot %d. Seconds %d. %s\n" , islot_modulo, secsIntoCurrentSlot, itx_trigger?"Tx":"Rx");
     }
 
-    if((ZERO == islot_modulo))
+    if(0 == islot_modulo)
     {
         if(!itx_trigger)
         {
@@ -246,23 +218,18 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     }
     else
     {
-        uint32_t secsToNextTx = ((pctx->_txSched._u8_tx_slot_skip - islot_number) * 2 * MINUTE) - secsIntoCurrentSlot; 
-
-        /*
-        if(verbose && (secsIntoCurrentSlot == 0) && lastSkipSlotModuloDisplayed != islot_modulo)
-        {
-            printf("WSPR> Passive slot. Next Tx in %d\n",islot_modulo);
-            lastSkipSlotModuloDisplayed = islot_modulo; 
-        }*/
+        //uint32_t secsToNextTx = ((pctx->_txSched._u8_tx_slot_skip - islot_number) * 2 * MINUTE) - secsIntoCurrentSlot; 
 
         if (itx_trigger)
         {
-            TxChannelStop();// Stop the modulator
+            // Code should not get here. But this is what the original code did and its helpful as a failsafe
+            TxChannelStop();
             itx_trigger = 0;
 
-            if (debugPrint) printf("Fallsafe Tx shutdown needed\n");
-            // Code should not get here. But this is what the original code did and its helpful as a failsafe
-
+            if (debugPrint)
+            {
+                printf("Fallsafe Tx shutdown needed\n");
+            }
         }
     }
 
