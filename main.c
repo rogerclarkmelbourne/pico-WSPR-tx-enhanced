@@ -160,7 +160,7 @@ int main()
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
         
      
-        // wait for 3 PPS pulses to guarantee stability
+        // wait for 10 PPS pulses to guarantee stability
         for (int i=0;i<10;i++)
         {
             while(!ppsTriggered)
@@ -168,14 +168,16 @@ int main()
                 messageCounter++;
                 if ((messageCounter % 1000) == 0)
                 {
-                    printf("PPS Wait.....  %d\n",10-i);
+                    printf("PPS Wait.....  %d\n",9-i);
                 }
                 sleep_ms(1);
             }
             ppsTriggered = false;
         }
 
-        int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last) % HOUR;   
+        // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
+        int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;  
+         
         initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
     }
     else
@@ -198,8 +200,8 @@ int main()
                 .day   = 01,
                 .dotw  = 0, 
                 .hour  = 0,
-                .min   = 59,
-                .sec   = 59
+                .min   = 0,
+                .sec   = 0
             };   
         rtc_set_datetime(&t);
 

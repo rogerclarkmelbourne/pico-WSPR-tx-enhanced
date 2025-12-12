@@ -155,7 +155,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
 
     if( pctx->_txSched._u8_tx_GPS_mandatory)
     {
-        isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last) % HOUR;
+        isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;
     }
     else
     {
@@ -177,7 +177,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     {
         if(!itx_trigger)
         {
-            if (secsIntoCurrentSlot == 0)
+            if (secsIntoCurrentSlot == 1)
             {
                 itx_trigger = 1;
 
@@ -190,8 +190,8 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
         {
             // WSPR Tx data only lasts  110.6 seconds, 
             // and is supposed to start 1 second after the start of an even numbered minute
-            // So the osc can be safely stopped after 113 seconds 
-            if (secsIntoCurrentSlot >= 113)
+            // So the osc can be safely stopped after 115 seconds 
+            if (secsIntoCurrentSlot >= 115)
             {
                 TxChannelStop();// Stop the modulator
                 printf("WSPR> End Tx\n");
