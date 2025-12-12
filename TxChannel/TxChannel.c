@@ -124,13 +124,14 @@ void TxChannelSetOffsetFrequency(uint32_t offsetFreq)
 void TxChannelStart(void)
 {    
     irq_set_enabled(TIMER_IRQ_0, true);
-    spTX->_tm_future_call = timer_hw->timerawl + 140000UL;// VK3KYY Not sure why a delay is needed before the first symbol is transmitted
+    spTX->_tm_future_call = timer_hw->timerawl;// + 140000UL;// VK3KYY Not sure why a delay is needed before the first symbol is transmitted
     timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
 
    // TxChannelISR();// Set the freq of the first symbol to be sent.
 
-    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
+    //PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
     PioDCOStart(spTX->_p_oscillator);// turn on the oscillator
+    TxChannelISR();
 }
 
 void TxChannelStop(void)
