@@ -175,16 +175,7 @@ int main()
             ppsTriggered = false;
         }
 
-        // should definietly have RMC data if there has been PPS
-        while(pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last == 0)
-        {
-            printf("Waiting for GPS receiver time data\n");
-            sleep_ms(1000);
-        }
-
-        printf("WSPR> GPS time received %s\n" , pWB->_pTX->_p_oscillator->_pGPStime->_time_data.lastRMCDateTime);
-
-        int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;   
+        int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last) % HOUR;   
         initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
     }
     else
@@ -252,20 +243,6 @@ int main()
         ppsTriggered = false;
         watchdog_update();
 
-#if false
-        uint32_t msSinceBootM500 = to_ms_since_boot(get_absolute_time()) % 1000;
-        if (msSinceBootM500 < 500)
-        {
-            gpio_put(PICO_DEFAULT_LED_PIN, 1);
-        }
-        else
-        {
-            if (msSinceBootM500 >= 500 )
-            {
-                gpio_put(PICO_DEFAULT_LED_PIN, 0);
-            }
-        }
-#endif
 
 #if (defined(DEBUG) && false)
         if(0 == ++tick % 60)

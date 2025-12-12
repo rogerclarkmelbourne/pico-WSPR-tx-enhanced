@@ -155,9 +155,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
 
     if( pctx->_txSched._u8_tx_GPS_mandatory)
     {
-        isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + ((GetUptime64() - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL)) % HOUR;
-
-        //printf("Sec = %d\n", isec_of_hour%60);
+        isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last) % HOUR;
     }
     else
     {
@@ -172,7 +170,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     
     if (debugPrint)
     {
-            printf("Slot %d. Seconds %d. %s\n" , islot_modulo, secsIntoCurrentSlot, itx_trigger?"Tx":"Rx");
+        printf("Slot %d. Seconds %d. %s\n" , islot_modulo, secsIntoCurrentSlot, itx_trigger?"Tx":"Rx");
     }
 
     if(0 == islot_modulo)
