@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <piodco.h>
 
-
+#include "hardware/watchdog.h"
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x00;
+const uint32_t  CURRENT_VERSION = 0x01;
 
 SettingsData settingsData;
 
@@ -91,11 +91,14 @@ void settingsReadFromFlash(void)
     {   
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
-        settingsData.bandIndex          =   2;// 40m
+        settingsData.bandsBitPattern        =   0B100;// 40m
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator4, 0x00, 16);// completely erase
         settingsData.slotSkip           =   1;// Every other slot
+        settingsData.gpioPin            = RFOUT_PIN;
+        settingsData.frequencyHop       = false;
+        settingsData.initialOffsetInWSPRFreqRange = 0;
         settingsWriteToFlash();
     }
 }
@@ -135,14 +138,25 @@ bool settingsCheckSettings(void)
     {
         printf("LOCATOR:%s\n",settingsData.locator4);   
     }
-    if (settingsData.bandIndex == -1)
+    if (settingsData.bandsBitPattern == 0)
     {
-        printf("Error: BAND not set\n");
+        printf("Error: No bands set\n");
         retVal = false;
     }
     else
     {
-        printf("BAND:%dm\n",bandNames[settingsData.bandIndex]);   
+        uint32_t bitPattern = settingsData.bandsBitPattern;
+        printf("BAND(s):");
+
+        for(int i=0;i<NUM_BANDS;i++)
+        {
+            if(bitPattern & 0x00000001)
+            {
+                printf("%dm ",bandNames[i]);   
+            }
+            bitPattern = bitPattern >> 1;
+        }
+        printf("\n");
     }
 
     if (settingsData.slotSkip == -1)
@@ -158,7 +172,29 @@ bool settingsCheckSettings(void)
 
     printf("CALPPM:%d\n", settingsData.freqCalibrationPPM);
 
-    
+    printf("GPIOPIN:%d\n", settingsData.gpioPin);
+
+
+    printf("FREQHOP:%s\n", settingsData.frequencyHop?"YES":"NO");
+ 
+    printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
+
+
+    char *msg;
+    switch(settingsData.gpsMode)
+    {
+        case GPS_MODE_OFF:
+            msg = "Off";
+            break;
+        case GPS_MODE_AUTO:
+             msg = "Auto";
+            break;
+        case GPS_MODE_ON:
+            msg = "On";
+            break;
+    }
+    printf("GPS: %d %s\n", settingsData.gpsMode, msg);
+
     return retVal;
 }
 
@@ -186,13 +222,28 @@ int bandIndexFromString(char *bandString)
     return -1; // band not found
 }
 
-
-void handleSettings(bool buttonIsPressed)
+int findNextBandIndex(int currentIndex)
 {
 
+    uint32_t bitPattern = settingsData.bandsBitPattern >> currentIndex;
+
+    while(currentIndex < NUM_BANDS)
+    {
+        if(bitPattern & 0x01)
+        {
+            return currentIndex;
+        }
+        currentIndex++;
+        bitPattern = bitPattern >> 1;
+    }
+}
+
+
+void handleSettings(bool forceSettingsEntry)
+{
     settingsReadFromFlash();
     
-    if (!settingsCheckSettings() || getchar() || buttonIsPressed)
+    if (!settingsCheckSettings() || forceSettingsEntry)
     {
         char key[MAX_KEY];
         char value[MAX_VAL];
@@ -200,6 +251,7 @@ void handleSettings(bool buttonIsPressed)
 
         while (true)
         {
+            settingsCheckSettings();
             printf("Enter setting in the form SETTING=VALUE\ne.g. CALLSIGN=VK3KYY or LOCATOR=AA00\n\n");
 
             int idx = 0;
@@ -230,6 +282,19 @@ void handleSettings(bool buttonIsPressed)
             convertToUpper(line);
 
             bool settingsAreDirty = false;
+
+            if (strcmp(line,"REBOOT") == 0)
+            {
+                printf("Exiting settings. Rebooting...");
+                watchdog_enable(1, 1);
+                while(true);
+            }
+
+            if (strcmp(line,"EXIT") == 0)
+            {
+                printf("Exiting settings.");
+                return;
+            }
             
             if (parse_kv(line, key, value)) 
             {
@@ -255,12 +320,15 @@ void handleSettings(bool buttonIsPressed)
                     {
                         if (strcmp("BAND", key) == 0)
                         {
-                            int newBandIndex = bandIndexFromString(value);
-                            if (newBandIndex!= -1)
-                            {
-                                settingsData.bandIndex = newBandIndex;
+                            int bandIndex = bandIndexFromString(value);
 
-                                printf("\nSetting band to %dm\n", bandNames[settingsData.bandIndex]);
+                            if (bandIndex!= -1)
+                            {
+
+                                uint32_t pattern = 1 << bandIndex;
+
+                                settingsData.bandsBitPattern ^= pattern;
+ 
                                 settingsAreDirty = true;
                             }
                             else
@@ -296,7 +364,58 @@ void handleSettings(bool buttonIsPressed)
                                 }
                                 else
                                 {
-                                    printf("Uknown setting\n");
+                                    if (strcmp("GPIOPIN", key) == 0)
+                                    {
+                                        settingsData.gpioPin = atoi(value);
+
+                                        printf("\nSetting GPIO pin to %d ppm\n",settingsData.gpioPin);
+                                        settingsAreDirty = true;
+                                    }
+                                    else
+                                    {
+                                        if (strcmp("OFFSET", key) == 0)
+                                        {
+                                            settingsData.initialOffsetInWSPRFreqRange = atoi(value);
+
+                                            printf("\nSetting initial freq offset to %d ppm\n",settingsData.initialOffsetInWSPRFreqRange);
+                                            settingsAreDirty = true;
+                                        }
+                                        else
+                                        {
+                                            if (strcmp("FREQHOP", key) == 0)
+                                            {
+                                                settingsData.frequencyHop = (strcmp(value,"ON") == 0);
+
+                                                printf("\nSetting frequency hop to %s\n",settingsData.frequencyHop?"ON":"OFF");
+                                                settingsAreDirty = true;
+                                            }
+                                            else
+                                            {
+                                                if (strcmp("GPS", key) == 0)
+                                                {
+                                                    if (strcmp(value,"OFF") == 0)
+                                                    {
+                                                        settingsData.gpsMode = GPS_MODE_OFF;
+                                                        printf("\nSetting GPS mode to OFF\n");
+                                                    }
+                                                    else
+                                                    {
+                                                        if (strcmp(value,"AUTO") == 0)
+                                                        {
+                                                            settingsData.gpsMode = GPS_MODE_AUTO;
+                                                            printf("\nSetting GPS mode to AUTO\n");
+                                                        }
+                                                    }
+
+                                                    settingsAreDirty = true;
+                                                }
+                                                else
+                                                {
+                                                    printf("Uknown setting\n");
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

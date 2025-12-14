@@ -52,6 +52,7 @@
 #include "WSPRbeacon.h"
 #include <WSPRutility.h>
 #include <maidenhead.h>
+#include "persistentStorage.h"
 
 int lastOffsetFreq = 0;
 
@@ -194,20 +195,22 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             {
                 printf("WSPR> End Tx. @ %d secs\n",secsIntoCurrentSlot);
 
-                // Set the freq of the next transmission now.
-                const int FREQ_STEP_SIZE = 5;// Hz
-                const int rangeInHzSteps = WSPR_FREQ_RANGE_HZ / FREQ_STEP_SIZE;
-                int r,offset;
-                do
+                if (settingsData.frequencyHop)
                 {
-                    r = (rand() % rangeInHzSteps) - (rangeInHzSteps/2);
-                    offset = r * FREQ_STEP_SIZE;
-                } while (lastOffsetFreq == offset);
-                lastOffsetFreq = offset;
+                    // Set the freq of the next transmission now.
+                    const int FREQ_STEP_SIZE = 5;// Hz
+                    const int rangeInHzSteps = WSPR_FREQ_RANGE_HZ / FREQ_STEP_SIZE;
+                    int r,offset;
+                    do
+                    {
+                        r = (rand() % rangeInHzSteps) - (rangeInHzSteps/2);
+                        offset = r * FREQ_STEP_SIZE;
+                    } while (lastOffsetFreq == offset);
+                    lastOffsetFreq = offset;
 
-                printf("Offset frequency %d Hz\n",offset);
-                TxChannelSetOffsetFrequency(offset);
-
+                    printf("Offset frequency %d Hz\n",offset);
+                    TxChannelSetOffsetFrequency(offset);
+                }
                 itx_trigger = 0;
             }
         }

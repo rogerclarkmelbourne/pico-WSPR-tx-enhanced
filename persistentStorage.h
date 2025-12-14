@@ -19,10 +19,15 @@ typedef struct  {
     int32_t     freqCalibrationPPM;
     uint8_t     callsign[16];
     uint8_t     locator4[16];
-    int8_t      bandIndex;
-    int8_t      slotSkip;
+    int32_t     bandsBitPattern;
+    uint8_t     slotSkip;
+    uint8_t     gpsMode;   
+    uint8_t     gpioPin; 
+    int         initialOffsetInWSPRFreqRange;
+    bool        frequencyHop;
 } SettingsData;
 
+enum gpsModes {GPS_MODE_OFF = 0,GPS_MODE_AUTO = 1,GPS_MODE_ON = 2};
 extern SettingsData settingsData;
 
 // Use last sector at the top of flash for storage
@@ -39,6 +44,6 @@ int parse_kv(const char *input, char *key, char *value) ;
 void convertToUpper(char str[]);
 int bandIndexFromString(char *bandString);
 
-void handleSettings(bool buttonIsPressed);
-
+void handleSettings(bool forceSettingsEntryd);
+int findNextBandIndex(int currentIndex);
 #endif

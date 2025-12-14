@@ -111,18 +111,25 @@ int main()
     PioDco DCO = {0};
 
     StampPrintf("\n");
+    for(int i=0;i<10;i++)
+    {
+        sleep_ms(1000);
+        printf("Wait for keypress to enter settings\n");
+        if (gpio_get(BTN_PIN) || getchar()) 
+        {
+            handleSettings(true);
+        }
+    }
 
-
-    handleSettings(gpio_get(BTN_PIN));
 
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
         settingsData.locator4,/* the default QTH locator if GPS isn't used. */
         17,             /* Tx power, dbm. */
         &DCO,           /* the PioDCO object. */
-        bandFrequencies[settingsData.bandIndex] + ((bandFrequencies[settingsData.bandIndex] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
-        0,           /* the carrier freq. centre freq of the band */
-        RFOUT_PIN       /* RF output GPIO pin. */
+        bandFrequencies[findNextBandIndex(0)] + ((bandFrequencies[findNextBandIndex(0)] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
+        settingsData.initialOffsetInWSPRFreqRange,           /* the carrier freq. */
+        settingsData.gpioPin       /* RF output GPIO pin. */
         );
     assert_(pWB);
     pWSPR = pWB;
@@ -140,13 +147,20 @@ int main()
     // Location, callsign and power data does not change, so we only need to create it once.
     WSPRbeaconCreatePacket(pWB);
 
-#if true
-    DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
- #else
- // Testing for button mode when a GPS is attached
-     DCO._pGPStime = calloc(1, sizeof(GPStimeContext));
-     DCO._pGPStime->GpsNmeaReceived = false;
- #endif   
+    printf("GPS %d\n",settingsData.gpsMode);
+
+    if (settingsData.gpsMode == GPS_MODE_AUTO)
+    {
+        printf("Init GPS\n");
+        DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
+    }
+    else
+    {
+        DCO._pGPStime = calloc(1, sizeof(GPStimeContext));
+        DCO._pGPStime->GpsNmeaReceived = false;
+        printf("IGNORE GPS\n");
+    }
+
     assert_(DCO._pGPStime);
 
     repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
@@ -158,8 +172,7 @@ int main()
     if (DCO._pGPStime->GpsNmeaReceived)
     {
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
-        
-     
+
         // wait for 10 PPS pulses to guarantee stability
         for (int i=0;i<10;i++)
         {
