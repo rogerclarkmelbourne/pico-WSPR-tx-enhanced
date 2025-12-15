@@ -53,11 +53,22 @@
 #include <WSPRutility.h>
 #include <maidenhead.h>
 #include "persistentStorage.h"
+#include <pico/time.h>
 
 WSPRbeaconContext becaconData = {0};
 WSPRbeaconContext *pWSPR = &becaconData;
 
-int lastOffsetFreq = 0;
+repeating_timer_t ledFlashTimer;
+
+static int ledTick = 0;
+static int lastOffsetFreq = 0;
+
+bool ledTimer_callback(__unused repeating_timer_t *rt)
+ {
+    gpio_put(PICO_DEFAULT_LED_PIN, !gpio_get(PICO_DEFAULT_LED_PIN));// Toggle LED state
+    //printf("timer_callback %d\n",i);
+    return true; // keep repeating
+}
 
 /// @brief Initializes a new WSPR beacon context.
 /// @param pcallsign HAM radio callsign, 12 chr max.
@@ -182,6 +193,8 @@ int WSPRbeaconTxScheduler(uint32_t initSlotOffset, int verbose)
                 WSPRbeaconSendPacket();
                
                 printf("WSPR> Start TX.\n");
+
+                ledFlashTimer.delay_us = 500000;
             }
         }
         else
@@ -189,6 +202,8 @@ int WSPRbeaconTxScheduler(uint32_t initSlotOffset, int verbose)
             // Check if Tx has finished and Osc has been turned off
             if (!becaconData._pTX->_p_oscillator->_is_enabled)
             {
+                ledFlashTimer.delay_us = 2000000;
+ 
                 printf("WSPR> End Tx. @ %d secs\n",secsIntoCurrentSlot);
 
                 if (settingsData.frequencyHop)

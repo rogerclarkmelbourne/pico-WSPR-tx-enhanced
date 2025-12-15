@@ -84,6 +84,7 @@ typedef struct
 } WSPRbeaconContext;
 
 extern WSPRbeaconContext *pWSPR;
+extern repeating_timer_t ledFlashTimer;
 
 WSPRbeaconContext * WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
                                   uint32_t dial_freq_hz, int32_t shift_freq_hz,
@@ -98,5 +99,7 @@ void WSPRbeaconDumpContext(void);
 
 char *WSPRbeaconGetLastQTHLocator(void);
 uint8_t WSPRbeaconIsGPSsolutionActive(void);
+
+bool ledTimer_callback(__unused repeating_timer_t *rt);
 
 #endif

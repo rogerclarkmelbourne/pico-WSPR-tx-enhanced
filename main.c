@@ -72,23 +72,9 @@
 #include "persistentStorage.h"
 #include "hardware/watchdog.h"
 
-
 #define CONFIG_GPS_SOLUTION_IS_MANDATORY NO
 #define CONFIG_GPS_RELY_ON_PAST_SOLUTION NO
-//#define CONFIG_SCHEDULE_SKIP_SLOT_COUNT 5
-//#define CONFIG_WSPR_DIAL_FREQUENCY 7040000UL // 18106000UL //24926000UL // 28126000UL //7040000UL
-//#define CONFIG_CALLSIGN "VK3KYY"
-//#define CONFIG_LOCATOR4 "QF69"
-
 #define BTN_PIN 21 //pin 27 on pico board
-#define REPEAT_TX_EVERY_MINUTE 4 // 4 is the minimum, for longer intervals choose 6,8,10,12, ...
-
-
-
-
-
-int i=0;
-bool timer_callback(repeating_timer_t *rt);
 
 bool timer_callback(__unused repeating_timer_t *rt)
  {
@@ -100,7 +86,7 @@ bool timer_callback(__unused repeating_timer_t *rt)
 
 int main()
 {
-    repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
+    repeating_timer_t oneSecondTimer;// Used in conjunction with the RTC for no GPS operation
     InitPicoHW();
     rtc_init();
     gpio_init(BTN_PIN);
@@ -112,11 +98,14 @@ int main()
 
     for(int i=0;i<10;i++)
     {
-        sleep_ms(1000);
         printf("Wait for keypress to enter settings\n");
         if (gpio_get(BTN_PIN) || getchar()) 
         {
             handleSettings(true);
+        }
+        else
+        {
+            sleep_ms(1000);
         }
     }
 
@@ -148,7 +137,7 @@ int main()
     {
         printf("Init GPS\n");
         GPStimeInit(0, 9600, GPS_PPS_PIN);
-        sleep_ms(2000);// GPS should send data at least once per second. 
+        sleep_ms(5000);// GPS should send data at least once per second. 
     }
     else
     {
@@ -189,7 +178,7 @@ int main()
     }
     else
     {
-        // block waiting for 
+        // block waiting for button to start
         
         while(!gpio_get(BTN_PIN))
         {
@@ -217,7 +206,7 @@ int main()
 
         const int hz = 1;// once per second
 
-        if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &timer))
+        if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &oneSecondTimer))
         {
             while(true)
             {
@@ -230,6 +219,16 @@ int main()
 
     watchdog_enable(2000, 1);
     int tick = 0;
+
+    // slow flash
+    if (!add_repeating_timer_us(-2000000, ledTimer_callback, NULL, &ledFlashTimer))
+    {
+        while(true)
+        {
+            printf("Failed to add led timer\n");
+        }
+    }
+
     while(true)
     {
         /*
@@ -257,6 +256,5 @@ int main()
         if(0 == ++tick % 60)
             WSPRbeaconDumpContext(pWB);
 #endif
-        //sleep_ms(10);
     }
 }

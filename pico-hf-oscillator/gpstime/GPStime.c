@@ -187,7 +187,6 @@ void RAM (GPStimeUartRxIsr)()
         uart_inst_t *puart_id = gTimeContext._uart_id ? uart1 : uart0;
         for(;;uart_is_readable(puart_id))
         {
-            gpio_put(PICO_DEFAULT_LED_PIN, 1);
             uint8_t chr = uart_getc(puart_id);
             gTimeContext._pbytebuff[gTimeContext._u8_ixw++] = chr;
             gTimeContext._is_sentence_ready = ('\n' == chr);

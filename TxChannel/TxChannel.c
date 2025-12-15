@@ -73,10 +73,6 @@ static void __not_in_flash_func (TxChannelISR)(void)
 
         hw_clear_bits(&timer_hw->intr, 1U<<txChannelContext._timer_alarm_num);
         timer_hw->alarm[txChannelContext._timer_alarm_num] = (uint32_t)txChannelContext._tm_future_call;
-
-        /* LED debug signal */
-        static int tick = 0;
-        gpio_put(PICO_DEFAULT_LED_PIN, ++tick & 1);
     }
     else
     {
