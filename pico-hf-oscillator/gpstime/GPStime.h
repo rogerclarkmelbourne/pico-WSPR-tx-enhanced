@@ -120,17 +120,14 @@ typedef struct
 
 } GPStimeContext;
 
+extern GPStimeContext gTimeContext;
+
 GPStimeContext *GPStimeInit(int uart_id, int uart_baud, int pps_gpio);
-void GPStimeDestroy(GPStimeContext **pp);
-
-int GPStimeProcNMEAsentence(GPStimeContext *pg);
-
+int GPStimeProcNMEAsentence(void);
 void RAM (GPStimePPScallback)(uint gpio, uint32_t events);
 void RAM (GPStimeUartRxIsr)();
-
-int GPStimeGetTime(const GPStimeContext *pg, uint32_t *u32_tmdst);
+int GPStimeGetTime(uint32_t *u32_tmdst);
 uint32_t GPStime2UNIX(const char *pdate, const char *ptime);
-
 void GPStimeDump(const GPStimeData *pd);
 
 #endif

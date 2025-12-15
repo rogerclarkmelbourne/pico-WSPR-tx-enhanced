@@ -100,6 +100,7 @@ bool timer_callback(__unused repeating_timer_t *rt)
 
 int main()
 {
+    repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
     InitPicoHW();
     rtc_init();
     gpio_init(BTN_PIN);
@@ -134,33 +135,27 @@ int main()
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
-
-
     multicore_launch_core1(Core1Entry);
     StampPrintf("RF oscillator started.");
-
 
     // Location, callsign and power data does not change, so we only need to create it once.
     WSPRbeaconCreatePacket();
 
-    printf("GPS %d\n",settingsData.gpsMode);
+
+    pWB->_pTX->_p_oscillator->_pGPStime= &gTimeContext;
 
     if (settingsData.gpsMode == GPS_MODE_AUTO)
     {
         printf("Init GPS\n");
-        pWB->_pTX->_p_oscillator->_pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
+        GPStimeInit(0, 9600, GPS_PPS_PIN);
+        sleep_ms(2000);// GPS should send data at least once per second. 
     }
     else
     {
-        pWB->_pTX->_p_oscillator->_pGPStime= calloc(1, sizeof(GPStimeContext));
         pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived = false;
         printf("IGNORE GPS\n");
     }
 
-
-    repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
-
-    sleep_ms(2000);// GPS should send data at least once per second. 
     uint32_t initialSlotOffset;
     int messageCounter = 0;
 
@@ -231,7 +226,7 @@ int main()
         }
     }
 
-    srand(get_absolute_time());
+    srand(get_absolute_time());// For frequency hopping
 
     watchdog_enable(2000, 1);
     int tick = 0;

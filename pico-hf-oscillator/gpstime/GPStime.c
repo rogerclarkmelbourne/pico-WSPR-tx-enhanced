@@ -60,9 +60,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "GPStime.h"
 
-GPStimeContext gTimeContext;
-
-static GPStimeContext *spGPStimeContext = NULL;
+GPStimeContext gTimeContext = {0};
 volatile static GPStimeData *spGPStimeData = NULL;
 
 /// @brief Initializes GPS time module Context.
@@ -81,16 +79,15 @@ GPStimeContext *GPStimeInit(int uart_id, int uart_baud, int pps_gpio)
     gpio_set_function(uart_id ? 8 : 0, GPIO_FUNC_UART);
     gpio_set_function(uart_id ? 9 : 1, GPIO_FUNC_UART);
 
-    GPStimeContext *pgt = calloc(1, sizeof(GPStimeContext));
-    ASSERT_(pgt);
+    GPStimeContext *pgt = &gTimeContext;
+  
+    gTimeContext._uart_id = uart_id;
+    gTimeContext._uart_baudrate = uart_baud;
+    gTimeContext._pps_gpio = pps_gpio;
+    gTimeContext.GpsNmeaReceived = false;
 
-    pgt->_uart_id = uart_id;
-    pgt->_uart_baudrate = uart_baud;
-    pgt->_pps_gpio = pps_gpio;
-    pgt->GpsNmeaReceived = false;
 
-    spGPStimeContext = pgt;
-    spGPStimeData = &pgt->_time_data;
+    spGPStimeData = &gTimeContext._time_data;
 
     gpio_init(pps_gpio);
     gpio_set_dir(pps_gpio, GPIO_IN);
@@ -106,20 +103,7 @@ GPStimeContext *GPStimeInit(int uart_id, int uart_baud, int pps_gpio)
     return pgt;
 }
 
-/// @brief Deinits the GPS module and destroys allocated resources.
-/// @param pp Ptr to Ptr of the Context.
-void GPStimeDestroy(GPStimeContext **pp)
-{
-    ASSERT_(pp);
-    ASSERT_(*pp);
 
-    spGPStimeContext = NULL;    /* Detach global context Ptr. */
-    spGPStimeData = NULL;
-
-    uart_deinit((*pp)->_uart_id ? uart1 : uart0);
-    free(*pp);
-    *pp = NULL;
-}
 
 volatile bool ppsTriggered = false;
 
@@ -170,19 +154,18 @@ void RAM (GPStimePPScallback)(uint gpio, uint32_t events)
 /// @return 0 if OK.
 /// @return -1 There was NO historical GPS fixes.
 /// @return -2 The fix was expired (24hrs or more time ago).
-int GPStimeGetTime(const GPStimeContext *pg, uint32_t *u32_tmdst)
+int GPStimeGetTime(uint32_t *u32_tmdst)
 {
-    assert_(pg);
     assert(u32_tmdst);
 
     /* If there has been no fix, it's no way to get any time data... */
-    if(!pg->_time_data._u32_utime_nmea_last)
+    if(!gTimeContext._time_data._u32_utime_nmea_last)
     {
         return -1;
     }
 
     const uint64_t tm64 = GetUptime64();
-    const uint64_t dt = tm64 - pg->_time_data._u64_sysclk_nmea_last;
+    const uint64_t dt = tm64 - gTimeContext._time_data._u64_sysclk_nmea_last;
     const uint32_t dt_sec = PicoU64timeToSeconds(dt);
 
     /* If expired. */
@@ -191,7 +174,7 @@ int GPStimeGetTime(const GPStimeContext *pg, uint32_t *u32_tmdst)
         return -2;
     }
 
-    *u32_tmdst = pg->_time_data._u32_utime_nmea_last + dt_sec;
+    *u32_tmdst = gTimeContext._time_data._u32_utime_nmea_last + dt_sec;
 
     return 0;
 }
@@ -199,23 +182,23 @@ int GPStimeGetTime(const GPStimeContext *pg, uint32_t *u32_tmdst)
 /// @brief UART FIFO ISR. Processes another N chars receiver from GPS rec.
 void RAM (GPStimeUartRxIsr)()
 {
-    if(spGPStimeContext)
+    
     {
-        uart_inst_t *puart_id = spGPStimeContext->_uart_id ? uart1 : uart0;
+        uart_inst_t *puart_id = gTimeContext._uart_id ? uart1 : uart0;
         for(;;uart_is_readable(puart_id))
         {
             gpio_put(PICO_DEFAULT_LED_PIN, 1);
             uint8_t chr = uart_getc(puart_id);
-            spGPStimeContext->_pbytebuff[spGPStimeContext->_u8_ixw++] = chr;
-            spGPStimeContext->_is_sentence_ready = ('\n' == chr);
+            gTimeContext._pbytebuff[gTimeContext._u8_ixw++] = chr;
+            gTimeContext._is_sentence_ready = ('\n' == chr);
             break;
         }
 
-        if(spGPStimeContext->_is_sentence_ready)
+        if(gTimeContext._is_sentence_ready)
         {
-            spGPStimeContext->GpsNmeaReceived = true;
-            spGPStimeContext->_u8_ixw = 0;
-            spGPStimeContext->_i32_error_count -= GPStimeProcNMEAsentence(spGPStimeContext);
+            gTimeContext.GpsNmeaReceived = true;
+            gTimeContext._u8_ixw = 0;
+            gTimeContext._i32_error_count -= GPStimeProcNMEAsentence();
         }
     }
 }
@@ -227,22 +210,20 @@ void RAM (GPStimeUartRxIsr)()
 /// @return -3 Error: bad lon format.
 /// @return -4 Error: no final '*' char ere checksum value.
 /// @attention Checksum validation is not implemented so far. !FIXME!
-int GPStimeProcNMEAsentence(GPStimeContext *pg)
+int GPStimeProcNMEAsentence(void)
 {
-    assert_(pg);
-
-    uint8_t *prmc = (uint8_t *)strnstr((char *)pg->_pbytebuff, "$GPRMC,", sizeof(pg->_pbytebuff));
+    uint8_t *prmc = (uint8_t *)strnstr((char *)gTimeContext._pbytebuff, "$GPRMC,", sizeof(gTimeContext._pbytebuff));
 
     if (prmc == NULL)
     {
-        prmc = (uint8_t *)strnstr((char *)pg->_pbytebuff, "$GNRMC,", sizeof(pg->_pbytebuff));
+        prmc = (uint8_t *)strnstr((char *)gTimeContext._pbytebuff, "$GNRMC,", sizeof(gTimeContext._pbytebuff));
     }
 
     if(prmc)
     {
 
 
-        ++pg->_time_data._u32_nmea_gprmc_count;
+        ++gTimeContext._time_data._u32_nmea_gprmc_count;
 
         uint64_t tm_fix = GetUptime64();
         uint32_t u8ixcollector[32] = {0};
@@ -250,9 +231,9 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
         uint32_t paramaterCount;
         uint32_t index;
 
-        for(index = 0, paramaterCount = 0; index != sizeof(pg->_pbytebuff); ++index)
+        for(index = 0, paramaterCount = 0; index != sizeof(gTimeContext._pbytebuff); ++index)
         {
-            uint8_t *p = pg->_pbytebuff + index;
+            uint8_t *p = gTimeContext._pbytebuff + index;
             chksum ^= *p;
             if(',' == *p)
             {
@@ -267,26 +248,26 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
         
         paramaterCount--;//
 
-        pg->_time_data._u8_is_solution_active = 'A' == prmc[u8ixcollector[1]];
+        gTimeContext._time_data._u8_is_solution_active = 'A' == prmc[u8ixcollector[1]];
 
-        if(pg->_time_data._u8_is_solution_active)
+        if(gTimeContext._time_data._u8_is_solution_active)
         {
-            pg->_time_data._i64_lat_100k = (int64_t)(.5f + 1e5 * atof((const char *)prmc + u8ixcollector[2]));
+            gTimeContext._time_data._i64_lat_100k = (int64_t)(.5f + 1e5 * atof((const char *)prmc + u8ixcollector[2]));
             if('N' == prmc[u8ixcollector[3]]) { }
             else if('S' == prmc[u8ixcollector[3]])
             {
-                INVERSE(pg->_time_data._i64_lat_100k);
+                INVERSE(gTimeContext._time_data._i64_lat_100k);
             }
             else
             {
                 return -2;
             }
 
-            pg->_time_data._i64_lon_100k = (int64_t)(.5f + 1e5 * atof((const char *)prmc + u8ixcollector[4]));
+            gTimeContext._time_data._i64_lon_100k = (int64_t)(.5f + 1e5 * atof((const char *)prmc + u8ixcollector[4]));
             if('E' == prmc[u8ixcollector[5]]) { }
             else if('W' == prmc[u8ixcollector[5]])
             {
-                INVERSE(pg->_time_data._i64_lon_100k);
+                INVERSE(gTimeContext._time_data._i64_lon_100k);
             }
             else
             {
@@ -298,10 +279,10 @@ int GPStimeProcNMEAsentence(GPStimeContext *pg)
                 return -4;
             }
 
-            sprintf((char *)pg->_time_data.lastRMCDateTime, "%s %s", (char *)(prmc + u8ixcollector[8]), (char *)(prmc + u8ixcollector[0]));
+            sprintf((char *)gTimeContext._time_data.lastRMCDateTime, "%s %s", (char *)(prmc + u8ixcollector[8]), (char *)(prmc + u8ixcollector[0]));
 
-            pg->_time_data._u32_utime_nmea_last = GPStime2UNIX(prmc + u8ixcollector[8], prmc + u8ixcollector[0]);
-            pg->_time_data._u64_sysclk_nmea_last = tm_fix;
+            gTimeContext._time_data._u32_utime_nmea_last = GPStime2UNIX(prmc + u8ixcollector[8], prmc + u8ixcollector[0]);
+            gTimeContext._time_data._u64_sysclk_nmea_last = tm_fix;
         }
     }
     
