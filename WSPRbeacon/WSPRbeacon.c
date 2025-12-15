@@ -54,6 +54,9 @@
 #include <maidenhead.h>
 #include "persistentStorage.h"
 
+WSPRbeaconContext becaconData = {0};
+WSPRbeaconContext *pWSPR = &becaconData;
+
 int lastOffsetFreq = 0;
 
 /// @brief Initializes a new WSPR beacon context.
@@ -65,48 +68,43 @@ int lastOffsetFreq = 0;
 /// @param shift_freq_hz The shift of tx freq. relative to dial_freq_hz.
 /// @param gpio Pico's GPIO pin of RF output.
 /// @return Ptr to the new context.
-WSPRbeaconContext *WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
-                                  PioDco *pdco, uint32_t dial_freq_hz, int32_t shift_freq_hz,
+WSPRbeaconContext * WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
+                                  uint32_t dial_freq_hz, int32_t shift_freq_hz,
                                   int gpio)
 {
     assert_(pcallsign);
     assert_(pgridsquare);
-    assert_(pdco);
 
-    WSPRbeaconContext *p = calloc(1, sizeof(WSPRbeaconContext));
-    assert_(p);
 
-    strncpy(p->_pu8_callsign, pcallsign, sizeof(p->_pu8_callsign));
-    strncpy(p->_pu8_locator, pgridsquare, sizeof(p->_pu8_locator));
-    p->_u8_txpower = txpow_dbm;
+    strncpy(becaconData._pu8_callsign, pcallsign, sizeof(becaconData._pu8_callsign));
+    strncpy(becaconData._pu8_locator, pgridsquare, sizeof(becaconData._pu8_locator));
+    becaconData._u8_txpower = txpow_dbm;
 
-    p->_pTX = TxChannelInit(682667, 0, pdco);
-    assert_(p->_pTX);
+    becaconData._pTX = TxChannelInit(682667, 0);
+    assert_(becaconData._pTX);
 
     TxChannelSetFrequency(dial_freq_hz, shift_freq_hz);
 
-    p->_pTX->_i_tx_gpio = gpio;
+    becaconData._pTX->_i_tx_gpio = gpio;
 
-    return p;
+    return &becaconData;
 }
 
 /// @brief Sets dial (baseband minima) freq.
 /// @param pctx Context.
 /// @param freq_hz the freq., Hz.
-void WSPRbeaconSetDialFreq(WSPRbeaconContext *pctx, uint32_t freq_hz)
+void WSPRbeaconSetDialFreq(uint32_t freq_hz)
 {
-    assert_(pctx);
-    pctx->_pTX->_u32_Txfreqhz = freq_hz;
+
+    becaconData._pTX->_u32_Txfreqhz = freq_hz;
 }
 
 /// @brief Constructs a new WSPR packet using the data available.
 /// @param pctx Context
 /// @return 0 if OK.
-int WSPRbeaconCreatePacket(WSPRbeaconContext *pctx)
+int WSPRbeaconCreatePacket(void)
 {
-    assert_(pctx);
-
-    wspr_encode(pctx->_pu8_callsign, pctx->_pu8_locator, pctx->_u8_txpower, pctx->_pu8_outbuf);
+    wspr_encode(becaconData._pu8_callsign, becaconData._pu8_locator, becaconData._u8_txpower, becaconData._pu8_outbuf);
 
     return 0;
 }
@@ -114,16 +112,15 @@ int WSPRbeaconCreatePacket(WSPRbeaconContext *pctx)
 /// @brief Sends a prepared WSPR packet using TxChannel.
 /// @param pctx Context.
 /// @return 0, if OK.
-int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx)
+int WSPRbeaconSendPacket(void)
 {
-    assert_(pctx);
-    assert_(pctx->_pTX);
-    assert_(pctx->_pTX->_u32_Txfreqhz > 500 * kHz);
+    assert_(becaconData._pTX);
+    assert_(becaconData._pTX->_u32_Txfreqhz > 500 * kHz);
 
-    TxChannelClear(pctx->_pTX);
+    TxChannelClear(becaconData._pTX);
 
-    memcpy(pctx->_pTX->_pbyte_buffer, pctx->_pu8_outbuf, WSPR_SYMBOL_COUNT);
-    pctx->_pTX->_ix_input = WSPR_SYMBOL_COUNT;
+    memcpy(becaconData._pTX->_pbyte_buffer, becaconData._pu8_outbuf, WSPR_SYMBOL_COUNT);
+    becaconData._pTX->_ix_input = WSPR_SYMBOL_COUNT;
 
 
 
@@ -144,9 +141,8 @@ uint32_t lastSkipSlotModuloDisplayed = 0;
 int itx_trigger = 0;
 uint32_t lastIntDisplayed = 0;
 
-int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int verbose)
+int WSPRbeaconTxScheduler(uint32_t initSlotOffset, int verbose)
 {
-    assert_(pctx);
     bool debugPrint = verbose;
 
     datetime_t rtcDateTime;
@@ -154,10 +150,10 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     uint32_t islot_number;
     uint32_t islot_modulo;
 
-    if( pctx->_txSched._u8_tx_GPS_mandatory)
+    if( becaconData._txSched._u8_tx_GPS_mandatory)
     {
         // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
-        isec_of_hour = (pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;
+        isec_of_hour = (becaconData._pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;
     }
     else
     {
@@ -166,7 +162,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
     }
 
     islot_number = (isec_of_hour  / (2 * MINUTE)) + initSlotOffset;
-    islot_modulo = islot_number % pctx->_txSched._u8_tx_slot_skip;
+    islot_modulo = islot_number % becaconData._txSched._u8_tx_slot_skip;
 
     uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
     
@@ -183,7 +179,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
             {
                 itx_trigger = 1;
 
-                WSPRbeaconSendPacket(pctx);
+                WSPRbeaconSendPacket();
                
                 printf("WSPR> Start TX.\n");
             }
@@ -191,7 +187,7 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
         else
         {
             // Check if Tx has finished and Osc has been turned off
-            if (!pctx->_pTX->_p_oscillator->_is_enabled)
+            if (!becaconData._pTX->_p_oscillator->_is_enabled)
             {
                 printf("WSPR> End Tx. @ %d secs\n",secsIntoCurrentSlot);
 
@@ -221,25 +217,24 @@ int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initSlotOffset, int 
 
 /// @brief Dumps the beacon context to stdio.
 /// @param pctx Ptr to Context.
-void WSPRbeaconDumpContext(const WSPRbeaconContext *pctx)
+void WSPRbeaconDumpContext(void)
 {
-    assert_(pctx);
-    assert_(pctx->_pTX);
+    assert_(becaconData._pTX);
 
     const uint64_t u64tmnow = GetUptime64();
     const uint64_t u64_GPS_last_age_sec 
-        = (u64tmnow - pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL;
+        = (u64tmnow - becaconData._pTX->_p_oscillator->_pGPStime->_time_data._u64_sysclk_nmea_last) / 1000000ULL;
 
     StampPrintf("__________________");
     StampPrintf("=TxChannelContext=");
-    StampPrintf("ftc:%llu", pctx->_pTX->_tm_future_call);
-    StampPrintf("ixi:%u", pctx->_pTX->_ix_input);
-    StampPrintf("dfq:%lu", pctx->_pTX->_u32_Txfreqhz);
-    StampPrintf("gpo:%u", pctx->_pTX->_i_tx_gpio);
+    StampPrintf("ftc:%llu", becaconData._pTX->_tm_future_call);
+    StampPrintf("ixi:%u", becaconData._pTX->_ix_input);
+    StampPrintf("dfq:%lu", becaconData._pTX->_u32_Txfreqhz);
+    StampPrintf("gpo:%u", becaconData._pTX->_i_tx_gpio);
 
-    GPStimeContext *pGPS = pctx->_pTX->_p_oscillator->_pGPStime;
+    GPStimeContext *pGPS = becaconData._pTX->_p_oscillator->_pGPStime;
     const uint32_t u32_unixtime_now 
-            = pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + u64_GPS_last_age_sec;
+            = becaconData._pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + u64_GPS_last_age_sec;
     assert_(pGPS);
     StampPrintf("=GPStimeContext=");
     StampPrintf("err:%ld", pGPS->_i32_error_count);
@@ -258,25 +253,24 @@ void WSPRbeaconDumpContext(const WSPRbeaconContext *pctx)
 /// @param pctx Ptr to WSPR beacon context.
 /// @return ptr to string of QTH locator (static duration object inside get_mh).
 /// @remark It uses third-party project https://github.com/sp6q/maidenhead .
-char *WSPRbeaconGetLastQTHLocator(const WSPRbeaconContext *pctx)
+char *WSPRbeaconGetLastQTHLocator(void)
 {
-    assert_(pctx);
-    assert_(pctx->_pTX);
-    assert_(pctx->_pTX->_p_oscillator);
-    assert_(pctx->_pTX->_p_oscillator->_pGPStime);
+    assert_(becaconData._pTX);
+    assert_(becaconData._pTX->_p_oscillator);
+    assert_(becaconData._pTX->_p_oscillator->_pGPStime);
     
-    const double lat = 1e-5 * (double)pctx->_pTX->_p_oscillator->_pGPStime->_time_data._i64_lat_100k;
-    const double lon = 1e-5 * (double)pctx->_pTX->_p_oscillator->_pGPStime->_time_data._i64_lon_100k;
+    const double lat = 1e-5 * (double)becaconData._pTX->_p_oscillator->_pGPStime->_time_data._i64_lat_100k;
+    const double lon = 1e-5 * (double)becaconData._pTX->_p_oscillator->_pGPStime->_time_data._i64_lon_100k;
 
     return get_mh(lat, lon, 8);
 }
 
-uint8_t WSPRbeaconIsGPSsolutionActive(const WSPRbeaconContext *pctx)
+uint8_t WSPRbeaconIsGPSsolutionActive(void)
 {
-    assert_(pctx);
-    assert_(pctx->_pTX);
-    assert_(pctx->_pTX->_p_oscillator);
-    assert_(pctx->_pTX->_p_oscillator->_pGPStime);
 
-    return YES == pctx->_pTX->_p_oscillator->_pGPStime->_time_data._u8_is_solution_active;
+    assert_(becaconData._pTX);
+    assert_(becaconData._pTX->_p_oscillator);
+    assert_(becaconData._pTX->_p_oscillator->_pGPStime);
+
+    return YES == becaconData._pTX->_p_oscillator->_pGPStime->_time_data._u8_is_solution_active;
 }

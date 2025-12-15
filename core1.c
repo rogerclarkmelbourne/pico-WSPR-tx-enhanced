@@ -57,7 +57,7 @@
 #include <defines.h>
 #include <WSPRbeacon.h>
 
-extern WSPRbeaconContext *pWSPR;
+
 
 /// @brief The code of dedicated core' program running HF oscillator.
 void Core1Entry()

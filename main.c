@@ -85,7 +85,6 @@
 
 
 
-WSPRbeaconContext *pWSPR;
 
 
 int i=0;
@@ -106,13 +105,10 @@ int main()
     gpio_init(BTN_PIN);
     gpio_set_dir(BTN_PIN, GPIO_IN);
     gpio_set_pulls(BTN_PIN,false,true);
-    
-
-    PioDco DCO = {0};
 
     StampPrintf("\n");
     handleSettings(false);
-    
+
     for(int i=0;i<10;i++)
     {
         sleep_ms(1000);
@@ -128,13 +124,11 @@ int main()
         settingsData.callsign,/* the Callsign. */
         settingsData.locator4,/* the default QTH locator if GPS isn't used. */
         settingsData.outputPowerDbm,/* Tx power, dbm. */
-        &DCO,           /* the PioDCO object. */
         bandFrequencies[findNextBandIndex(0)] + ((bandFrequencies[findNextBandIndex(0)] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
         settingsData.initialOffsetInWSPRFreqRange,           /* the carrier freq. */
         settingsData.gpioPin       /* RF output GPIO pin. */
         );
-    assert_(pWB);
-    pWSPR = pWB;
+
     
     pWB->_txSched._u8_tx_GPS_mandatory  = false;
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
@@ -147,23 +141,21 @@ int main()
 
 
     // Location, callsign and power data does not change, so we only need to create it once.
-    WSPRbeaconCreatePacket(pWB);
+    WSPRbeaconCreatePacket();
 
     printf("GPS %d\n",settingsData.gpsMode);
 
     if (settingsData.gpsMode == GPS_MODE_AUTO)
     {
         printf("Init GPS\n");
-        DCO._pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
+        pWB->_pTX->_p_oscillator->_pGPStime = GPStimeInit(0, 9600, GPS_PPS_PIN);
     }
     else
     {
-        DCO._pGPStime = calloc(1, sizeof(GPStimeContext));
-        DCO._pGPStime->GpsNmeaReceived = false;
+        pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived = false;
         printf("IGNORE GPS\n");
     }
 
-    assert_(DCO._pGPStime);
 
     repeating_timer_t timer;// Used in conjunction with the RTC for no GPS operation
 
@@ -171,7 +163,7 @@ int main()
     uint32_t initialSlotOffset;
     int messageCounter = 0;
 
-    if (DCO._pGPStime->GpsNmeaReceived)
+    if (pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived)
     {
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
 
@@ -245,9 +237,9 @@ int main()
     while(true)
     {
         /*
-        if(WSPRbeaconIsGPSsolutionActive(pWB))
+        if(WSPRbeaconIsGPSsolutionActive())
         {
-            const char *pgps_qth = WSPRbeaconGetLastQTHLocator(pWB);
+            const char *pgps_qth = WSPRbeaconGetLastQTHLocator();
             if(pgps_qth)
             {
                 strncpy(pWB->_pu8_locator, pgps_qth, 4);
@@ -260,7 +252,7 @@ int main()
         {
             tight_loop_contents();
         }
-        WSPRbeaconTxScheduler(pWB, initialSlotOffset, false);
+        WSPRbeaconTxScheduler(initialSlotOffset, false);
         ppsTriggered = false;
         watchdog_update();
 

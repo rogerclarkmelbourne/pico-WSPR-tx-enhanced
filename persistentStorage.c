@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x02;
+const uint32_t  CURRENT_VERSION = 0x05;
 
 SettingsData settingsData;
 
@@ -101,7 +101,9 @@ void settingsReadFromFlash(void)
         settingsData.gpsMode            = GPS_MODE_AUTO;
         settingsData.initialOffsetInWSPRFreqRange = 0;
         settingsData.outputPowerDbm = 13;
+
         settingsWriteToFlash();
+        printf("\n\nSettings have been reset\n\n");
     }
 }
 
@@ -176,10 +178,11 @@ bool settingsCheckSettings(void)
 
     printf("GPIOPIN:%d\n", settingsData.gpioPin);
 
+    printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
 
     printf("FREQHOP:%s\n", settingsData.frequencyHop?"YES":"NO");
- 
-    printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
+
+    printf("POWER:%d\n", settingsData.outputPowerDbm);
 
 
     char *msg;
@@ -253,8 +256,9 @@ void handleSettings(bool forceSettingsEntry)
 
         while (true)
         {
+            printf("Firmware built %s %s\n", __TIME__, __DATE__);
             settingsCheckSettings();
-            printf("Enter setting in the form SETTING=VALUE\ne.g. CALLSIGN=VK3KYY or LOCATOR=AA00\n\n");
+            printf("Enter setting in the form SETTING VALUE\ne.g. CALLSIGN VK3KYY or LOCATOR AA00\n\n");
 
             int idx = 0;
             for (;;)
@@ -295,7 +299,10 @@ void handleSettings(bool forceSettingsEntry)
             if (strcmp(line,"EXIT") == 0)
             {
                 printf("Exiting settings.");
-                return;
+                if (settingsCheckSettings())
+                {
+                    return;
+                }
             }
             
             if (parse_kv(line, key, value)) 

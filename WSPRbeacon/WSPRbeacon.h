@@ -83,18 +83,20 @@ typedef struct
 
 } WSPRbeaconContext;
 
-WSPRbeaconContext *WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
-                                  PioDco *pdco, uint32_t dial_freq_hz, int32_t shift_freq_hz,
+extern WSPRbeaconContext *pWSPR;
+
+WSPRbeaconContext * WSPRbeaconInit(const char *pcallsign, const char *pgridsquare, int txpow_dbm,
+                                  uint32_t dial_freq_hz, int32_t shift_freq_hz,
                                   int gpio);
-void WSPRbeaconSetDialFreq(WSPRbeaconContext *pctx, uint32_t freq_hz);
-int WSPRbeaconCreatePacket(WSPRbeaconContext *pctx);
-int WSPRbeaconSendPacket(const WSPRbeaconContext *pctx);
+void WSPRbeaconSetDialFreq( uint32_t freq_hz);
+int WSPRbeaconCreatePacket(void);
+int WSPRbeaconSendPacket(void);
 
-int WSPRbeaconTxScheduler(WSPRbeaconContext *pctx, uint32_t initialSlotOffset, int verbose);
+int WSPRbeaconTxScheduler( uint32_t initialSlotOffset, int verbose);
 
-void WSPRbeaconDumpContext(const WSPRbeaconContext *pctx);
+void WSPRbeaconDumpContext(void);
 
-char *WSPRbeaconGetLastQTHLocator(const WSPRbeaconContext *pctx);
-uint8_t WSPRbeaconIsGPSsolutionActive(const WSPRbeaconContext *pctx);
+char *WSPRbeaconGetLastQTHLocator(void);
+uint8_t WSPRbeaconIsGPSsolutionActive(void);
 
 #endif

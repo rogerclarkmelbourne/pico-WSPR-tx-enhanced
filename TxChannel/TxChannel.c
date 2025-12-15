@@ -49,27 +49,30 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "TxChannel.h"
 
+static TxChannelContext txChannelContext = {0};
+static TxChannelContext *spTX = &txChannelContext;
 
-static TxChannelContext *spTX = NULL;
+PioDco DCO = {0};
+
 static void __not_in_flash_func (TxChannelISR)(void)
 {
-    PioDco *pDCO = spTX->_p_oscillator;
+    PioDco *pDCO = txChannelContext._p_oscillator;
 
     uint8_t byte;
     const int n2send = TxChannelPop(spTX, &byte);
     if(n2send)
     {
         const int32_t i32_compensation_millis = 
-            PioDCOGetFreqShiftMilliHertz(spTX->_p_oscillator, 
-                                         (uint64_t)(spTX->_u32_Txfreqhz * 1000LL));
+            PioDCOGetFreqShiftMilliHertz(txChannelContext._p_oscillator, 
+                                         (uint64_t)(txChannelContext._u32_Txfreqhz * 1000LL));
 
-        PioDCOSetFreq(pDCO, spTX->_u32_Txfreqhz, 
+        PioDCOSetFreq(pDCO, txChannelContext._u32_Txfreqhz, 
                       (uint32_t)byte * WSPR_FREQ_STEP_MILHZ - 2 * i32_compensation_millis);
 
-                         spTX->_tm_future_call += spTX->_bit_period_us;
+                         txChannelContext._tm_future_call += txChannelContext._bit_period_us;
 
-        hw_clear_bits(&timer_hw->intr, 1U<<spTX->_timer_alarm_num);
-        timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
+        hw_clear_bits(&timer_hw->intr, 1U<<txChannelContext._timer_alarm_num);
+        timer_hw->alarm[txChannelContext._timer_alarm_num] = (uint32_t)txChannelContext._tm_future_call;
 
         /* LED debug signal */
         static int tick = 0;
@@ -86,65 +89,61 @@ static void __not_in_flash_func (TxChannelISR)(void)
 /// @param timer_alarm_num Pico-specific hardware timer resource id.
 /// @param pDCO Ptr to oscillator.
 /// @return the Context.
-TxChannelContext *TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alarm_num, 
-                                PioDco *pDCO)
+TxChannelContext * TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alarm_num)
 {
-    assert_(pDCO);
+
     assert_(bit_period_us > 10);
 
-    TxChannelContext *p = calloc(1, sizeof(TxChannelContext));
-    assert_(p);
 
-    p->_bit_period_us = bit_period_us;
-    p->_timer_alarm_num = timer_alarm_num;
-    p->_p_oscillator = pDCO;
+    txChannelContext._bit_period_us = bit_period_us;
+    txChannelContext._timer_alarm_num = timer_alarm_num;
+    txChannelContext._p_oscillator = &DCO;
 
-    spTX = p;
 
-    hw_set_bits(&timer_hw->inte, 1U << p->_timer_alarm_num);
+    hw_set_bits(&timer_hw->inte, 1U << txChannelContext._timer_alarm_num);
     irq_set_exclusive_handler(TIMER_IRQ_0, TxChannelISR);
     irq_set_priority(TIMER_IRQ_0, 0x00);
 
-    return p;
+    return &txChannelContext;
 }
 
 void TxChannelSetFrequency(uint32_t dialFreq, uint32_t offsetFreq)
 {
-    spTX->_u32_dialfreqhz = dialFreq;
-    spTX->_u32_offsetfreqhz = offsetFreq;
-    spTX->_u32_Txfreqhz =  spTX->_u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + spTX->_u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
-    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the freq.
+    txChannelContext._u32_dialfreqhz = dialFreq;
+    txChannelContext._u32_offsetfreqhz = offsetFreq;
+    txChannelContext._u32_Txfreqhz =  txChannelContext._u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + txChannelContext._u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
+    PioDCOSetFreq(txChannelContext._p_oscillator, txChannelContext._u32_Txfreqhz, 0);// Reset the freq.
 
 }
 
 void TxChannelSetOffsetFrequency(uint32_t offsetFreq)
 {
-    spTX->_u32_offsetfreqhz = offsetFreq;
-    spTX->_u32_Txfreqhz =  spTX->_u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + spTX->_u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
-    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the freq.
+    txChannelContext._u32_offsetfreqhz = offsetFreq;
+    txChannelContext._u32_Txfreqhz =  txChannelContext._u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + txChannelContext._u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
+    PioDCOSetFreq(txChannelContext._p_oscillator, txChannelContext._u32_Txfreqhz, 0);// Reset the freq.
 }
 
 void TxChannelStart(void)
 {    
     irq_set_enabled(TIMER_IRQ_0, true);
-    spTX->_tm_future_call = timer_hw->timerawl;// + 140000UL;// VK3KYY Not sure why a delay is needed before the first symbol is transmitted
-    timer_hw->alarm[spTX->_timer_alarm_num] = (uint32_t)spTX->_tm_future_call;
+    txChannelContext._tm_future_call = timer_hw->timerawl;// + 140000UL;// VK3KYY Not sure why a delay is needed before the first symbol is transmitted
+    timer_hw->alarm[txChannelContext._timer_alarm_num] = (uint32_t)txChannelContext._tm_future_call;
 
    // TxChannelISR();// Set the freq of the first symbol to be sent.
 
-    //PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
-    PioDCOStart(spTX->_p_oscillator);// turn on the oscillator
+    //PioDCOSetFreq(txChannelContext._p_oscillator, txChannelContext._u32_Txfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
+    PioDCOStart(txChannelContext._p_oscillator);// turn on the oscillator
     TxChannelISR();
 }
 
 void TxChannelStop(void)
 {   
-    PioDCOStop(spTX->_p_oscillator); // Turn off the oscillator
+    PioDCOStop(txChannelContext._p_oscillator); // Turn off the oscillator
 
     // Stop sending data.
     irq_set_enabled(TIMER_IRQ_0, false);
-    timer_hw->alarm[spTX->_timer_alarm_num] = 0;    // Disable ALARM0 so it doesn't trigger
-    PioDCOSetFreq(spTX->_p_oscillator, spTX->_u32_Txfreqhz, 0);// Reset the freq.
+    timer_hw->alarm[txChannelContext._timer_alarm_num] = 0;    // Disable ALARM0 so it doesn't trigger
+    PioDCOSetFreq(txChannelContext._p_oscillator, txChannelContext._u32_Txfreqhz, 0);// Reset the freq.
     gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn off the LED
 }
 
