@@ -111,6 +111,8 @@ int main()
     PioDco DCO = {0};
 
     StampPrintf("\n");
+    handleSettings(false);
+    
     for(int i=0;i<10;i++)
     {
         sleep_ms(1000);
@@ -125,7 +127,7 @@ int main()
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
         settingsData.locator4,/* the default QTH locator if GPS isn't used. */
-        17,             /* Tx power, dbm. */
+        settingsData.outputPowerDbm,/* Tx power, dbm. */
         &DCO,           /* the PioDCO object. */
         bandFrequencies[findNextBandIndex(0)] + ((bandFrequencies[findNextBandIndex(0)] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
         settingsData.initialOffsetInWSPRFreqRange,           /* the carrier freq. */
@@ -173,21 +175,25 @@ int main()
     {
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
 
+        if (!ppsTriggered)
+        {
+            printf("PPS Wait....");
+        }
         // wait for 10 PPS pulses to guarantee stability
-        for (int i=0;i<10;i++)
+        for (int i=0;i<2;i++)
         {
             while(!ppsTriggered)
             {
                 messageCounter++;
                 if ((messageCounter % 1000) == 0)
                 {
-                    printf("PPS Wait.....  %d\n",9-i);
+                    printf(".");
                 }
                 sleep_ms(1);
             }
             ppsTriggered = false;
         }
-
+        printf("\nPPS received\n");
         // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;  
          

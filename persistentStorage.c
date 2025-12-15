@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x01;
+const uint32_t  CURRENT_VERSION = 0x02;
 
 SettingsData settingsData;
 
@@ -91,14 +91,16 @@ void settingsReadFromFlash(void)
     {   
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
-        settingsData.bandsBitPattern        =   0B100;// 40m
+        settingsData.bandsBitPattern    =   0B100;// 40m
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator4, 0x00, 16);// completely erase
         settingsData.slotSkip           =   1;// Every other slot
         settingsData.gpioPin            = RFOUT_PIN;
         settingsData.frequencyHop       = false;
+        settingsData.gpsMode            = GPS_MODE_AUTO;
         settingsData.initialOffsetInWSPRFreqRange = 0;
+        settingsData.outputPowerDbm = 13;
         settingsWriteToFlash();
     }
 }
@@ -411,7 +413,18 @@ void handleSettings(bool forceSettingsEntry)
                                                 }
                                                 else
                                                 {
-                                                    printf("Uknown setting\n");
+                                                    if (strcmp("POWER", key) == 0)
+                                                        {
+                                                            settingsData.outputPowerDbm = atoi(value);
+
+                                                            printf("\nSetting Power to %d dBm\n",settingsData.outputPowerDbm);
+
+                                                            settingsAreDirty = true;
+                                                        }
+                                                        else
+                                                        {
+                                                            printf("Uknown setting\n");
+                                                        }
                                                 }
                                             }
                                         }

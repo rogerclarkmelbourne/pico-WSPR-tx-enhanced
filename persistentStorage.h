@@ -21,10 +21,12 @@ typedef struct  {
     uint8_t     locator4[16];
     int32_t     bandsBitPattern;
     uint8_t     slotSkip;
-    uint8_t     gpsMode;   
-    uint8_t     gpioPin; 
-    int         initialOffsetInWSPRFreqRange;
-    bool        frequencyHop;
+    int32_t     gpsMode;   
+    int32_t     gpioPin; 
+    int32_t     initialOffsetInWSPRFreqRange;
+    uint32_t    outputPowerDbm;
+    int32_t     frequencyHop;
+
 } SettingsData;
 
 enum gpsModes {GPS_MODE_OFF = 0,GPS_MODE_AUTO = 1,GPS_MODE_ON = 2};
