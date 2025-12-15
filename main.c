@@ -152,6 +152,7 @@ int main()
     }
     else
     {
+        pWB->_pTX->_p_oscillator->_pGPStime= calloc(1, sizeof(GPStimeContext));
         pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived = false;
         printf("IGNORE GPS\n");
     }
