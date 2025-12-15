@@ -38,11 +38,11 @@ const uint32_t bandFrequencies[NUM_BANDS] = {
 
 int parse_kv(const char *input, char *key, char *value) 
 {
-    const char *eq = strchr(input, '=');
+    const char *eq = strchr(input, ' ');
 
     if (!eq)
     {
-        return 0;           // '=' not found → invalid format
+        return 0;           // ' ' not found → invalid format
     }
 
     size_t key_len = eq - input;
