@@ -83,11 +83,11 @@ void convertToUpper(char str[])
 
 
 // Read settings from flash and set to default values if no valid settings were found
-void settingsReadFromFlash(void)
+void settingsReadFromFlash(bool forceReset)
 {
     memcpy(&settingsData,flash_target_contents,sizeof(SettingsData));
     
-    if(settingsData.magicNumber != MAGIC_NUMBER || settingsData.settingsVersion != CURRENT_VERSION)
+    if(settingsData.magicNumber != MAGIC_NUMBER || settingsData.settingsVersion != CURRENT_VERSION || forceReset)
     {   
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
@@ -246,7 +246,7 @@ int findNextBandIndex(int currentIndex)
 
 void handleSettings(bool forceSettingsEntry)
 {
-    settingsReadFromFlash();
+    settingsReadFromFlash(false);
     
     if (!settingsCheckSettings() || forceSettingsEntry)
     {
@@ -291,19 +291,27 @@ void handleSettings(bool forceSettingsEntry)
 
             if (strcmp(line,"REBOOT") == 0)
             {
-                printf("Exiting settings. Rebooting...");
+                printf("Exiting settings. Rebooting...\n");
                 watchdog_enable(1, 1);
                 while(true);
             }
 
             if (strcmp(line,"EXIT") == 0)
             {
-                printf("Exiting settings.");
+                printf("Exiting settings.\n");
                 if (settingsCheckSettings())
                 {
                     return;
                 }
             }
+
+            if (strcmp(line,"RESET") == 0)
+            {
+                printf("Clearning settings.\n");
+                settingsReadFromFlash(true);
+                settingsCheckSettings();
+            }
+
             
             if (parse_kv(line, key, value)) 
             {

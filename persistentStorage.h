@@ -39,7 +39,7 @@ extern const uint8_t *flash_target_contents;
 extern const uint32_t bandNames[NUM_BANDS];
 extern const uint32_t bandFrequencies[NUM_BANDS];
 
-void settingsReadFromFlash(void);
+void settingsReadFromFlash(bool forceReset);
 void settingsWriteToFlash(void);
 bool settingsCheckSettings(void);
 int parse_kv(const char *input, char *key, char *value) ;
