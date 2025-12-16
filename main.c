@@ -145,6 +145,18 @@ int main()
         printf("IGNORE GPS\n");
     }
 
+
+    // very slow flash
+    if (!add_repeating_timer_us(-4000000, ledTimer_callback, NULL, &ledFlashTimer))
+    {
+        while(true)
+        {
+            printf("Failed to add led timer\n");
+        }
+    }
+
+    gpio_put(PICO_DEFAULT_LED_PIN, true);// Turn the LED on
+
     uint32_t initialSlotOffset;
     int messageCounter = 0;
 
@@ -220,14 +232,7 @@ int main()
     watchdog_enable(2000, 1);
     int tick = 0;
 
-    // slow flash
-    if (!add_repeating_timer_us(-2000000, ledTimer_callback, NULL, &ledFlashTimer))
-    {
-        while(true)
-        {
-            printf("Failed to add led timer\n");
-        }
-    }
+
 
     while(true)
     {
