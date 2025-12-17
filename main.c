@@ -162,7 +162,7 @@ int main()
     sleep_ms(100);
     WSPRbeaconCreatePacket();
     sleep_ms(100);
-    printf("Beacon packet created OK");
+    printf("Beacon packet created OK\n");
     sleep_ms(100);
 
     pWB->_pTX->_p_oscillator->_pGPStime= &gTimeContext;
