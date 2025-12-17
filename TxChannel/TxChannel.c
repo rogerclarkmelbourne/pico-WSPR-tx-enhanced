@@ -87,7 +87,6 @@ static void __not_in_flash_func (TxChannelISR)(void)
 /// @return the Context.
 TxChannelContext * TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alarm_num)
 {
-
     assert_(bit_period_us > 10);
 
 

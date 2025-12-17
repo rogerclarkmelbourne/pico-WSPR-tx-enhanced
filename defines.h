@@ -90,7 +90,8 @@
 
 #define kHz 1000UL                                                /* Freq. */
 #define MHz 1000000UL
-#define PLL_SYS_MHZ 270UL
+#define PLL_SYS_MHZ_OVERCLOCK 270UL
+#define PLL_SYS_MHZ 125UL
                                                              /* WSPR defs. */
 #define WSPR_FREQ_STEP_MILHZ    2930UL     /* FSK freq.bin (*2 this time). */
 #define WSPR_MAX_GPS_DISCONNECT_TM  \

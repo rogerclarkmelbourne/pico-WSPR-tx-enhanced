@@ -71,6 +71,8 @@
 #include "pico/util/datetime.h"
 #include "persistentStorage.h"
 #include "hardware/watchdog.h"
+#include "pico/bootrom.h"
+#include "tusb.h"
 
 #define CONFIG_GPS_SOLUTION_IS_MANDATORY NO
 #define CONFIG_GPS_RELY_ON_PAST_SOLUTION NO
@@ -84,6 +86,11 @@ bool timer_callback(__unused repeating_timer_t *rt)
     return true; // keep repeating
 }
 
+void rebootIntoFlashUpdateMode(void)
+{ 
+    reset_usb_boot(0, 0); // go to flash mode
+}
+
 int main()
 {
     repeating_timer_t oneSecondTimer;// Used in conjunction with the RTC for no GPS operation
@@ -94,21 +101,34 @@ int main()
     gpio_set_pulls(BTN_PIN,false,true);
 
     StampPrintf("\n");
-    handleSettings(false);
+    int cdcTimeoutCounter = 0;
 
-    for(int i=0;i<10;i++)
+    while (!tud_cdc_connected() && cdcTimeoutCounter < 30) 
     {
-        printf("Wait for keypress to enter settings\n");
-        if (gpio_get(BTN_PIN) || getchar()) 
-        {
-            handleSettings(true);
-        }
-        else
-        {
-            sleep_ms(1000);
-        }
+        cdcTimeoutCounter++;
+        sleep_ms(1000);  
     }
 
+    if (cdcTimeoutCounter < 30)
+    {
+        printf("USB Serial connected\n");
+    }
+    printf("Firmware built on %s at %s\n", __DATE__, __TIME__);
+
+    printf("Clock speed %dMHz\n",PLL_SYS_MHZ);
+
+    printf("Check Settings ..... \n");
+
+    handleSettings(gpio_get(BTN_PIN));
+
+    sleep_ms(100);
+
+    printf("Settings are OK\n\n");
+
+    sleep_ms(100);
+
+    printf("Initalise Beacon...     ");
+    sleep_ms(100);
 
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
@@ -124,12 +144,25 @@ int main()
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
+
+    printf("    Beacon initialised OK\n\n");
+    sleep_ms(100);
+
+
+    printf("Start second CPU core for freqency generator... ");
+    sleep_ms(100);
     multicore_launch_core1(Core1Entry);
-    StampPrintf("RF oscillator started.");
+    printf("  RF oscillator started OK\n\n");
 
-    // Location, callsign and power data does not change, so we only need to create it once.
+
+    sleep_ms(100);
+
+    printf("Create beacon packet data..... ");
+    sleep_ms(100);
     WSPRbeaconCreatePacket();
-
+    sleep_ms(100);
+    printf("Beacon packet created OK");
+    sleep_ms(100);
 
     pWB->_pTX->_p_oscillator->_pGPStime= &gTimeContext;
 
@@ -143,17 +176,28 @@ int main()
     {
         pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived = false;
         printf("IGNORE GPS\n");
+        sleep_ms(100);
     }
 
+    printf("Turn on the LED\n");
+    sleep_ms(100);
+    gpio_put(PICO_DEFAULT_LED_PIN, true);// Turn the LED on
 
+    printf("Start LED flashing timer at interval of 4 seconds...  ");
+    sleep_ms(100);
     // very slow flash
     if (!add_repeating_timer_us(-4000000, ledTimer_callback, NULL, &ledFlashTimer))
     {
         while(true)
         {
             printf("Failed to add led timer\n");
+            sleep_ms(1000);
         }
     }
+    sleep_ms(100);
+    printf("   LED Timer setup OK\n");
+    sleep_ms(100);
+
 
     gpio_put(PICO_DEFAULT_LED_PIN, true);// Turn the LED on
 
@@ -162,6 +206,9 @@ int main()
 
     if (pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived)
     {
+        printf("Using GPS..\n");
+
+
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
 
         if (!ppsTriggered)
@@ -191,7 +238,7 @@ int main()
     else
     {
         // block waiting for button to start
-        
+        printf("\nUsing external button to start Tx\n");
         while(!gpio_get(BTN_PIN))
         {
             sleep_ms(1);
@@ -201,6 +248,8 @@ int main()
                 printf("Waiting for button\n");
             }
         }
+
+        printf("\nButton pressed\n");
 
         datetime_t t = {
                 .year  = 2024,
@@ -217,19 +266,24 @@ int main()
         ppsTriggered = true;
 
         const int hz = 1;// once per second
+        printf("\nSetup 1 second timer\n");
+
 
         if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &oneSecondTimer))
         {
             while(true)
             {
                 printf("Failed to add timer\n");
+                sleep_ms(1000);
             }
         }
     }
 
     srand(get_absolute_time());// For frequency hopping
 
-    watchdog_enable(2000, 1);
+
+    printf("\nEnable watchdog with 10 second timeout\n");
+    watchdog_enable(10000, 1);
     int tick = 0;
 
 
@@ -252,9 +306,12 @@ int main()
         {
             tight_loop_contents();
         }
-        WSPRbeaconTxScheduler(initialSlotOffset, false);
-        ppsTriggered = false;
+
         watchdog_update();
+
+        WSPRbeaconTxScheduler(initialSlotOffset, true);
+        ppsTriggered = false;
+
 
 
 #if (defined(DEBUG) && false)

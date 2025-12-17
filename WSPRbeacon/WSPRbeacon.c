@@ -83,16 +83,19 @@ WSPRbeaconContext * WSPRbeaconInit(const char *pcallsign, const char *pgridsquar
                                   uint32_t dial_freq_hz, int32_t shift_freq_hz,
                                   int gpio)
 {
-    assert_(pcallsign);
-    assert_(pgridsquare);
-
-
     strncpy(becaconData._pu8_callsign, pcallsign, sizeof(becaconData._pu8_callsign));
     strncpy(becaconData._pu8_locator, pgridsquare, sizeof(becaconData._pu8_locator));
     becaconData._u8_txpower = txpow_dbm;
 
     becaconData._pTX = TxChannelInit(682667, 0);
-    assert_(becaconData._pTX);
+    if (!becaconData._pTX)
+    {
+        printf("Failed to initialise 'Channel' data.\nUnable to continue\n");
+        while(true) 
+        {
+            sleep_ms(1000);
+        }
+    }
 
     TxChannelSetFrequency(dial_freq_hz, shift_freq_hz);
 
