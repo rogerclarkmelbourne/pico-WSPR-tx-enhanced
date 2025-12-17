@@ -103,7 +103,8 @@ int main()
     StampPrintf("\n");
     int cdcTimeoutCounter = 0;
     bool buttonHeldAtBoot = gpio_get(BTN_PIN);
-
+    
+#ifdef WAIT_CDC
     while (!tud_cdc_connected() && cdcTimeoutCounter < 30) 
     {
         cdcTimeoutCounter++;
@@ -114,6 +115,8 @@ int main()
     {
         printf("USB Serial connected\n");
     }
+#endif    
+
     printf("Firmware built on %s at %s\n", __DATE__, __TIME__);
 
     printf("Clock speed %dMHz\n",PLL_SYS_MHZ);
@@ -123,11 +126,8 @@ int main()
     handleSettings(buttonHeldAtBoot);
 
     sleep_ms(100);
-
     printf("Settings are OK\n\n");
-
     sleep_ms(100);
-
     printf("Initalise Beacon...     ");
     sleep_ms(100);
 
@@ -148,19 +148,20 @@ int main()
 
     printf("    Beacon initialised OK\n\n");
     sleep_ms(100);
-
-
     printf("Start second CPU core for freqency generator... ");
     sleep_ms(100);
+
+
     multicore_launch_core1(Core1Entry);
+    
     printf("  RF oscillator started OK\n\n");
-
-
     sleep_ms(100);
-
     printf("Create beacon packet data..... ");
     sleep_ms(100);
+
     WSPRbeaconCreatePacket();
+    
+    
     sleep_ms(100);
     printf("Beacon packet created OK\n");
     sleep_ms(100);
@@ -169,7 +170,9 @@ int main()
 
     if (settingsData.gpsMode == GPS_MODE_AUTO)
     {
+
         printf("Init GPS\n");
+
         GPStimeInit(0, 9600, GPS_PPS_PIN);
         sleep_ms(5000);// GPS should send data at least once per second. 
     }
@@ -286,8 +289,6 @@ int main()
     printf("\nEnable watchdog with 10 second timeout\n");
     watchdog_enable(10000, 1);
     int tick = 0;
-
-
 
     while(true)
     {
