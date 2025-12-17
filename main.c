@@ -102,6 +102,7 @@ int main()
 
     StampPrintf("\n");
     int cdcTimeoutCounter = 0;
+    bool buttonHeldAtBoot = gpio_get(BTN_PIN);
 
     while (!tud_cdc_connected() && cdcTimeoutCounter < 30) 
     {
@@ -119,7 +120,7 @@ int main()
 
     printf("Check Settings ..... \n");
 
-    handleSettings(gpio_get(BTN_PIN));
+    handleSettings(buttonHeldAtBoot);
 
     sleep_ms(100);
 
