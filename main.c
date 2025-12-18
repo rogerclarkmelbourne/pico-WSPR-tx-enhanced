@@ -260,11 +260,13 @@ int main()
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);
         ppsTriggered = true;
 
-        const int hz = 1;// once per second
         printf("\nSetup 1 second timer\n");
 
 
-        if (!add_repeating_timer_us(-1000000 / hz, timer_callback, NULL, &oneSecondTimer))
+        // use frequency calibration ppm value, because it will also affect the timers.
+        // However to increase the timer frequency, the callback time needs to be reduced instead of increased in the case of the frequency
+        // Hence the the value is deducted from the 1E6 us value
+        if (!add_repeating_timer_us(-1 * (1000000 - settingsData.freqCalibrationPPM), timer_callback, NULL, &oneSecondTimer))
         {
             while(true)
             {
