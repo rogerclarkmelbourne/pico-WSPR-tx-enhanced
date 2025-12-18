@@ -99,7 +99,6 @@ int main()
 {
     repeating_timer_t oneSecondTimer;// Used in conjunction with the RTC for no GPS operation
     InitPicoHW();
-    rtc_init();
     gpio_init(BTN_PIN);
     gpio_set_dir(BTN_PIN, GPIO_IN);
     gpio_set_pulls(BTN_PIN,false,true);
