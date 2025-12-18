@@ -56,7 +56,8 @@
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
-#include <defines.h>
+#include "defines.h"
+
 
 /// @brief Initializes Pi pico low level hardware.
 void InitPicoHW(void)
