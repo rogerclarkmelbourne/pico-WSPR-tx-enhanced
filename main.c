@@ -79,6 +79,9 @@
 #define CONFIG_GPS_RELY_ON_PAST_SOLUTION NO
 #define BTN_PIN 21 //pin 27 on pico board
 
+
+
+
 bool timer_callback(__unused repeating_timer_t *rt)
  {
 
@@ -236,7 +239,7 @@ int main()
         // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;  
          
-        initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
+        pWB->initialSlotOffset = (settingsData.slotSkip + 1) - (isec_of_hour / (2 * MINUTE)) - 1;
     }
     else
     {
@@ -265,7 +268,7 @@ int main()
             };   
         rtc_set_datetime(&t);
 
-        initialSlotOffset = (settingsData.slotSkip + 1);
+        pWB->initialSlotOffset = (settingsData.slotSkip + 1);
         ppsTriggered = true;
 
         const int hz = 1;// once per second
@@ -310,7 +313,7 @@ int main()
 
         watchdog_update();
 
-        WSPRbeaconTxScheduler(initialSlotOffset, true);
+        WSPRbeaconTxScheduler(true);
         ppsTriggered = false;
 
 

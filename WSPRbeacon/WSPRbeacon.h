@@ -80,6 +80,7 @@ typedef struct
     TxChannelContext *_pTX;
 
     WSPRbeaconSchedule _txSched;
+    uint32_t initialSlotOffset; // used allow Tx start at the begining of the next slot after bootup
 
 } WSPRbeaconContext;
 
@@ -93,7 +94,7 @@ void WSPRbeaconSetDialFreq( uint32_t freq_hz);
 int WSPRbeaconCreatePacket(void);
 int WSPRbeaconSendPacket(void);
 
-int WSPRbeaconTxScheduler( uint32_t initialSlotOffset, int verbose);
+int WSPRbeaconTxScheduler(int verbose);
 
 void WSPRbeaconDumpContext(void);
 

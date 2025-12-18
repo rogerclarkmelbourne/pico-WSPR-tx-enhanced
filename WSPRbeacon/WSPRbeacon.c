@@ -155,7 +155,7 @@ uint32_t lastSkipSlotModuloDisplayed = 0;
 int itx_trigger = 0;
 uint32_t lastIntDisplayed = 0;
 
-int WSPRbeaconTxScheduler(uint32_t initSlotOffset, int verbose)
+int WSPRbeaconTxScheduler(int verbose)
 {
     bool debugPrint = verbose;
 
@@ -175,7 +175,7 @@ int WSPRbeaconTxScheduler(uint32_t initSlotOffset, int verbose)
         isec_of_hour = rtcDateTime.min * 60 + rtcDateTime.sec;       
     }
 
-    islot_number = (isec_of_hour  / (2 * MINUTE)) + initSlotOffset;
+    islot_number = (isec_of_hour  / (2 * MINUTE)) + becaconData.initialSlotOffset;
     islot_modulo = islot_number % becaconData._txSched._u8_tx_slot_skip;
 
     uint32_t secsIntoCurrentSlot = (isec_of_hour % (2 * MINUTE));
