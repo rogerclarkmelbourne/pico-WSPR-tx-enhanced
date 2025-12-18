@@ -93,7 +93,7 @@
 #define PLL_SYS_MHZ_OVERCLOCK_270MHZ 270UL
 #define PLL_SYS_MHZ_OVERCLOCK_200MHZ 200UL
 #define PLL_SYS_MHZ_DEFAULT 125UL
-#define PLL_SYS_MHZ PLL_SYS_MHZ_DEFAULT
+#define PLL_SYS_MHZ PLL_SYS_MHZ_OVERCLOCK_200MHZ
                                                              /* WSPR defs. */
 #define WSPR_FREQ_STEP_MILHZ    2930UL     /* FSK freq.bin (*2 this time). */
 #define WSPR_MAX_GPS_DISCONNECT_TM  \

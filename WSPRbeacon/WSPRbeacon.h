@@ -56,7 +56,6 @@
 #include <string.h>
 #include <TxChannel.h>
 #include <logutils.h>
-#include "hardware/rtc.h"
 #include "pico/util/datetime.h"
 
 typedef struct
