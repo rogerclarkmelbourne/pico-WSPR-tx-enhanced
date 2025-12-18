@@ -248,6 +248,7 @@ void handleSettings(bool forceSettingsEntry)
 {
     settingsReadFromFlash(false);
     
+
     if (!settingsCheckSettings() || forceSettingsEntry)
     {
         char key[MAX_KEY];
@@ -257,8 +258,11 @@ void handleSettings(bool forceSettingsEntry)
         while (true)
         {
             printf("Firmware built %s %s\n", __TIME__, __DATE__);
+            printf("Clock speed %dMHz\n",PLL_SYS_MHZ);
+            
             settingsCheckSettings();
-            printf("Enter setting in the form SETTING VALUE\ne.g. CALLSIGN VK3KYY or LOCATOR AA00\n\n");
+            
+            printf("Enter setting in the form SETTING VALUE\ne.g. CALLSIGN VK3KYY\n\n");
 
             int idx = 0;
             for (;;)

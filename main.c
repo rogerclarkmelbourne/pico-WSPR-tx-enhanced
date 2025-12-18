@@ -74,6 +74,7 @@
 #include "pico/bootrom.h"
 #include "tusb.h"
 
+
 #define CONFIG_GPS_SOLUTION_IS_MANDATORY NO
 #define CONFIG_GPS_RELY_ON_PAST_SOLUTION NO
 #define BTN_PIN 21 //pin 27 on pico board
@@ -117,9 +118,7 @@ int main()
     }
 #endif    
 
-    printf("Firmware built on %s at %s\n", __DATE__, __TIME__);
 
-    printf("Clock speed %dMHz\n",PLL_SYS_MHZ);
 
     printf("Check Settings ..... \n");
 
