@@ -67,7 +67,6 @@
 #include <logutils.h>
 #include <protos.h>
 
-#include "hardware/rtc.h"
 #include "pico/util/datetime.h"
 #include "persistentStorage.h"
 #include "hardware/watchdog.h"
@@ -86,6 +85,7 @@ bool timer_callback(__unused repeating_timer_t *rt)
  {
 
     ppsTriggered = true;
+    pWSPR->secondsCounter++;
     //printf("timer_callback %d\n",i);
     return true; // keep repeating
 }
@@ -257,16 +257,6 @@ int main()
 
         printf("\nButton pressed\n");
 
-        datetime_t t = {
-                .year  = 2024,
-                .month = 01,
-                .day   = 01,
-                .dotw  = 0, 
-                .hour  = 0,
-                .min   = 0,
-                .sec   = 0
-            };   
-        rtc_set_datetime(&t);
 
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);
         ppsTriggered = true;

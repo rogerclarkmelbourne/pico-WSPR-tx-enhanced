@@ -159,7 +159,6 @@ int WSPRbeaconTxScheduler(int verbose)
 {
     bool debugPrint = verbose;
 
-    datetime_t rtcDateTime;
     uint32_t isec_of_hour;
     uint32_t islot_number;
     uint32_t islot_modulo;
@@ -171,8 +170,7 @@ int WSPRbeaconTxScheduler(int verbose)
     }
     else
     {
-        rtc_get_datetime(&rtcDateTime);
-        isec_of_hour = rtcDateTime.min * 60 + rtcDateTime.sec;       
+        isec_of_hour = becaconData.secondsCounter % HOUR;       
     }
 
     islot_number = (isec_of_hour  / (2 * MINUTE)) + becaconData.initialSlotOffset;

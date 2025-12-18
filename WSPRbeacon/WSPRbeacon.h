@@ -81,6 +81,7 @@ typedef struct
 
     WSPRbeaconSchedule _txSched;
     uint32_t initialSlotOffset; // used allow Tx start at the begining of the next slot after bootup
+    uint32_t secondsCounter;
 
 } WSPRbeaconContext;
 
