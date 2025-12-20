@@ -242,19 +242,24 @@ int main()
     }
     else
     {
+        // clear any chars from the input buffer
+        while(getchar())
+        {
+            sleep_ms(10);
+        }
         // block waiting for button to start
-        printf("\nUsing external button to start Tx\n");
-        while(!gpio_get(BTN_PIN))
+        printf("\nUsing external button or keypress to start Tx\n");
+        while(!gpio_get(BTN_PIN) && !getchar())
         {
             sleep_ms(1);
             messageCounter++;
             if ((messageCounter % 1000) == 0)
             {
-                printf("Waiting for button\n");
+                printf("Waiting for button or keypress\n");
             }
         }
 
-        printf("\nButton pressed\n");
+        printf("\nButton or key pressed\n");
 
 
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);
