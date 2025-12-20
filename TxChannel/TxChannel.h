@@ -76,6 +76,8 @@ typedef struct
     uint32_t _u32_offsetfreqhz;
 
     int _i_tx_gpio;
+    alarm_pool_t *alarmPool;
+    alarm_id_t      alarmId;
 
 } TxChannelContext;
 
