@@ -54,9 +54,12 @@ static TxChannelContext *spTX = &txChannelContext;
 
 PioDco DCO = {0};
 
+/*
 #ifdef PICO_RP2040
     #define BARE_METAL_TIMER
 #endif
+*/
+
 
 #ifdef BARE_METAL_TIMER
 static void __not_in_flash_func (TxChannelISR)(void)
