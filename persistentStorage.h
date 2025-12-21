@@ -18,7 +18,7 @@ typedef struct  {
     uint32_t    settingsVersion;
     int32_t     freqCalibrationPPM;
     uint8_t     callsign[16];
-    uint8_t     locator4[16];
+    uint8_t     locator[16];
     int32_t     bandsBitPattern;
     uint8_t     slotSkip;
     int32_t     gpsMode;   

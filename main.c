@@ -129,7 +129,7 @@ int main()
 
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
-        settingsData.locator4,/* the default QTH locator if GPS isn't used. */
+        settingsData.locator,/* the default QTH locator if GPS isn't used. */
         settingsData.outputPowerDbm,/* Tx power, dbm. */
         bandFrequencies[findNextBandIndex(0)] + ((bandFrequencies[findNextBandIndex(0)] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
         settingsData.initialOffsetInWSPRFreqRange,           /* the carrier freq. */
@@ -156,7 +156,7 @@ int main()
     printf("Create beacon packet data..... ");
     sleep_ms(100);
 
-    WSPRbeaconCreatePacket();
+    WSPRbeaconCreatePacket(false);// first transmission must not be encoded with 6 fig locator
     
     
     sleep_ms(100);
@@ -282,8 +282,8 @@ int main()
     {
         strcpy(lastMaidenHead, WSPRbeaconGetLastQTHLocator());
         strcpy(pWB->_pu8_locator, lastMaidenHead);
-        pWB->_pu8_locator[4] = 0x00;
-        WSPRbeaconCreatePacket();
+        pWB->_pu8_locator[6] = 0x00;
+        WSPRbeaconCreatePacket(pWB->longLocatorPhase & 0x01);
     }
 
     while(true)
@@ -292,14 +292,14 @@ int main()
         {
             char newMaidenHead[16];
             strcpy(newMaidenHead, WSPRbeaconGetLastQTHLocator());
-            newMaidenHead[4] = 0x00;
+            newMaidenHead[6] = 0x00;
             if(strcmp(newMaidenHead, pWB->_pu8_locator) != 0)
             {
                 #ifdef DEBUG
                     printf("Updating location from GPS %s != %s\n", newMaidenHead, pWB->_pu8_locator);
                 #endif
                 strcpy(pWB->_pu8_locator, newMaidenHead);
-                WSPRbeaconCreatePacket();
+                WSPRbeaconCreatePacket(pWB->longLocatorPhase & 0x01);
             }
         }
 

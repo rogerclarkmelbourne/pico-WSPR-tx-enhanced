@@ -70,8 +70,8 @@ typedef struct
 
 typedef struct
 {
-    uint8_t _pu8_callsign[12];
-    uint8_t _pu8_locator[7];
+    uint8_t _pu8_callsign[16];
+    uint8_t _pu8_locator[16];
     uint8_t _u8_txpower;
 
     uint8_t _pu8_outbuf[256];
@@ -81,6 +81,7 @@ typedef struct
     WSPRbeaconSchedule _txSched;
     uint32_t initialSlotOffset; // used allow Tx start at the begining of the next slot after bootup
     uint32_t secondsCounter;
+    uint32_t longLocatorPhase;
 
 } WSPRbeaconContext;
 
@@ -91,7 +92,7 @@ WSPRbeaconContext * WSPRbeaconInit(const char *pcallsign, const char *pgridsquar
                                   uint32_t dial_freq_hz, int32_t shift_freq_hz,
                                   int gpio);
 void WSPRbeaconSetDialFreq( uint32_t freq_hz);
-int WSPRbeaconCreatePacket(void);
+int WSPRbeaconCreatePacket(bool sendLongLocator);
 int WSPRbeaconSendPacket(void);
 
 int WSPRbeaconTxScheduler(int verbose);

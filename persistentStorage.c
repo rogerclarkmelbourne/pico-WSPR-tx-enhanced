@@ -94,7 +94,7 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.bandsBitPattern    =   0B100;// 40m
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
-        memset(settingsData.locator4, 0x00, 16);// completely erase
+        memset(settingsData.locator, 0x00, 16);// completely erase
         settingsData.slotSkip           =   1;// Every other slot
         settingsData.gpioPin            = RFOUT_PIN;
         settingsData.frequencyHop       = false;
@@ -134,14 +134,14 @@ bool settingsCheckSettings(void)
         printf("CALLSIGN:%s\n",settingsData.callsign);
     }
     
-    if (settingsData.locator4[0] == 0x00)
+    if (settingsData.locator[0] == 0x00)
     {
         printf("Error: LOCATOR not set\n");
         retVal = false;
     }
     else
     {
-        printf("LOCATOR:%s\n",settingsData.locator4);   
+        printf("LOCATOR:%s\n",settingsData.locator);   
     }
     if (settingsData.bandsBitPattern == 0)
     {
@@ -330,9 +330,9 @@ void handleSettings(bool forceSettingsEntry)
                 {
                     if (strcmp("LOCATOR", key) == 0)
                     {
-                        strncpy(settingsData.locator4, value, 16);
+                        strncpy(settingsData.locator, value, 16);
 
-                        printf("\nSetting locator to %s\n",settingsData.locator4);
+                        printf("\nSetting locator to %s\n",settingsData.locator);
 
                         settingsAreDirty = true;
                     }

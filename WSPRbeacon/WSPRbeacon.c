@@ -116,9 +116,20 @@ void WSPRbeaconSetDialFreq(uint32_t freq_hz)
 /// @brief Constructs a new WSPR packet using the data available.
 /// @param pctx Context
 /// @return 0 if OK.
-int WSPRbeaconCreatePacket(void)
+int WSPRbeaconCreatePacket(bool sendLongLocator)
 {
-    wspr_encode(becaconData._pu8_callsign, becaconData._pu8_locator, becaconData._u8_txpower, becaconData._pu8_outbuf);
+    char callsignBuf[16];
+    if (sendLongLocator && (strlen(becaconData._pu8_locator) == 6))
+    {
+        sprintf(callsignBuf, "<%s>",becaconData._pu8_callsign);
+        printf("Encode callsign %s\n",callsignBuf);
+        wspr_encode(callsignBuf, becaconData._pu8_locator, becaconData._u8_txpower, becaconData._pu8_outbuf);
+    }
+    else
+    {
+        wspr_encode(becaconData._pu8_callsign, becaconData._pu8_locator, becaconData._u8_txpower, becaconData._pu8_outbuf); 
+    }
+
 
     return 0;
 }
@@ -135,8 +146,6 @@ int WSPRbeaconSendPacket(void)
 
     memcpy(becaconData._pTX->_pbyte_buffer, becaconData._pu8_outbuf, WSPR_SYMBOL_COUNT);
     becaconData._pTX->_ix_input = WSPR_SYMBOL_COUNT;
-
-
 
     TxChannelStart();
 
@@ -192,8 +201,8 @@ int WSPRbeaconTxScheduler(int verbose)
                 itx_trigger = 1;
 
                 WSPRbeaconSendPacket();
-               
-                printf("WSPR> Start TX.\n");
+            
+                printf("WSPR> Start TX.\n");    
 
                 ledFlashTimer.delay_us = 500000;
             }
@@ -223,6 +232,9 @@ int WSPRbeaconTxScheduler(int verbose)
                     printf("Offset frequency %d Hz\n",offset);
                     TxChannelSetOffsetFrequency(offset);
                 }
+                becaconData.longLocatorPhase++;
+                WSPRbeaconCreatePacket(becaconData.longLocatorPhase & 0x01);
+
                 itx_trigger = 0;
             }
         }
