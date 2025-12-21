@@ -117,7 +117,6 @@ int PioDCOInit(PioDco *pdco, int gpio)
 int PioDCOSetFreq(PioDco *pdco, uint32_t ui32_frq_hz, int32_t ui32_frq_millihz)
 {
     assert_(pdco);
-    //assert(pdco->_clkfreq_hz);
 
     /* RPix: Calculate an accurate value of phase increment of the freq 
        per 1 tick of CPU clock, here 2^24 is scaling coefficient. */
