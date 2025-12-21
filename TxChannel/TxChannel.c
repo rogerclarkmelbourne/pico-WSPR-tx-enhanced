@@ -54,7 +54,18 @@ static TxChannelContext *spTX = &txChannelContext;
 
 PioDco DCO = {0};
 
+/*
+#ifdef PICO_RP2040
+    #define BARE_METAL_TIMER
+#endif
+*/
+
+
+#ifdef BARE_METAL_TIMER
 static void __not_in_flash_func (TxChannelISR)(void)
+#else
+static int64_t __not_in_flash_func (TxChannelISR)(alarm_id_t id, void *user_data)
+#endif
 {
     PioDco *pDCO = txChannelContext._p_oscillator;
 
@@ -69,15 +80,23 @@ static void __not_in_flash_func (TxChannelISR)(void)
         PioDCOSetFreq(pDCO, txChannelContext._u32_Txfreqhz, 
                       (uint32_t)byte * WSPR_FREQ_STEP_MILHZ - 2 * i32_compensation_millis);
 
-                         txChannelContext._tm_future_call += txChannelContext._bit_period_us;
 
+#ifdef BARE_METAL_TIMER
+        txChannelContext._tm_future_call += txChannelContext._bit_period_us;
         hw_clear_bits(&timer_hw->intr, 1U<<txChannelContext._timer_alarm_num);
         timer_hw->alarm[txChannelContext._timer_alarm_num] = (uint32_t)txChannelContext._tm_future_call;
+#endif        
     }
     else
     {
         TxChannelStop();
+#ifndef BARE_METAL_TIMER
+        return 0;// Timer should already be stopped, but returning 0 is also supposed to stop the timer alarm
+#endif
     }
+#ifndef BARE_METAL_TIMER
+    return txChannelContext._bit_period_us;// next period duration
+#endif 
 }
 
 /// @brief Initializes a TxChannel context. Starts ISR.
@@ -94,10 +113,14 @@ TxChannelContext * TxChannelInit(const uint32_t bit_period_us, uint8_t timer_ala
     txChannelContext._timer_alarm_num = timer_alarm_num;
     txChannelContext._p_oscillator = &DCO;
 
+    txChannelContext.alarmPool = alarm_pool_create_with_unused_hardware_alarm(1);
+ 
 
+#ifdef BARE_METAL_TIMER
     hw_set_bits(&timer_hw->inte, 1U << txChannelContext._timer_alarm_num);
     irq_set_exclusive_handler(TIMER_IRQ_0, TxChannelISR);
     irq_set_priority(TIMER_IRQ_0, 0x00);
+#endif    
 
     return &txChannelContext;
 }
@@ -120,24 +143,32 @@ void TxChannelSetOffsetFrequency(uint32_t offsetFreq)
 
 void TxChannelStart(void)
 {    
+
+    PioDCOStart(txChannelContext._p_oscillator);// turn on the oscillator
+#ifdef BARE_METAL_TIMER
     irq_set_enabled(TIMER_IRQ_0, true);
     txChannelContext._tm_future_call = timer_hw->timerawl;// + 140000UL;// VK3KYY Not sure why a delay is needed before the first symbol is transmitted
     timer_hw->alarm[txChannelContext._timer_alarm_num] = (uint32_t)txChannelContext._tm_future_call;
-
-   // TxChannelISR();// Set the freq of the first symbol to be sent.
-
-    //PioDCOSetFreq(txChannelContext._p_oscillator, txChannelContext._u32_Txfreqhz, 0);// Reset the frequency so that it does not immediatly start sending the last symbol 
-    PioDCOStart(txChannelContext._p_oscillator);// turn on the oscillator
     TxChannelISR();
+#else
+	txChannelContext.alarmId = alarm_pool_add_alarm_in_us( txChannelContext.alarmPool, txChannelContext._bit_period_us, TxChannelISR, NULL, true );
+    TxChannelISR(txChannelContext.alarmId, NULL);
+#endif
+
+
 }
 
 void TxChannelStop(void)
 {   
     PioDCOStop(txChannelContext._p_oscillator); // Turn off the oscillator
 
+#ifdef BARE_METAL_TIMER    
     // Stop sending data.
     irq_set_enabled(TIMER_IRQ_0, false);
     timer_hw->alarm[txChannelContext._timer_alarm_num] = 0;    // Disable ALARM0 so it doesn't trigger
+#else
+    alarm_pool_cancel_alarm(txChannelContext.alarmPool, txChannelContext.alarmId);
+#endif    
     PioDCOSetFreq(txChannelContext._p_oscillator, txChannelContext._u32_Txfreqhz, 0);// Reset the freq.
     gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn off the LED
 }

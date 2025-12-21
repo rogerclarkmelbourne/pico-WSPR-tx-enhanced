@@ -76,8 +76,6 @@ target_link_libraries(pico-wspr-tx-enhanced
                       hardware_timer
                       hardware_clocks
                       hardware_pio
-                      hardware_rtc
-                      
                      )
 
 pico_add_extra_outputs(pico-wspr-tx-enhanced)
