@@ -107,19 +107,14 @@ int main()
     int cdcTimeoutCounter = 0;
     bool buttonHeldAtBoot = gpio_get(BTN_PIN);
     
-#ifdef WAIT_CDC
-    while (!tud_cdc_connected() && cdcTimeoutCounter < 30) 
+#ifdef DEBUG
+    while (!tud_cdc_connected()) 
     {
-        cdcTimeoutCounter++;
         sleep_ms(1000);  
     }
-
-    if (cdcTimeoutCounter < 30)
-    {
-        printf("USB Serial connected\n");
-    }
+    
+    printf("USB Serial connected\n");
 #endif    
-
 
 
     printf("Check Settings ..... \n");
@@ -145,6 +140,7 @@ int main()
     pWB->_txSched._u8_tx_GPS_mandatory  = false;
     pWB->_txSched._u8_tx_GPS_past_time  = CONFIG_GPS_RELY_ON_PAST_SOLUTION;
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
+
 
 
     printf("    Beacon initialised OK\n\n");
@@ -185,13 +181,12 @@ int main()
     }
 
     printf("Turn on the LED\n");
-    sleep_ms(100);
-    gpio_put(PICO_DEFAULT_LED_PIN, true);// Turn the LED on
+    gpio_put(PICO_DEFAULT_LED_PIN, true);
 
     printf("Start LED flashing timer at interval of 4 seconds...  ");
     sleep_ms(100);
     // very slow flash
-    if (!add_repeating_timer_us(-4000000, ledTimer_callback, NULL, &ledFlashTimer))
+    if (!add_repeating_timer_us(-1000000, ledTimer_callback, NULL, &ledFlashTimer))
     {
         while(true)
         {
@@ -200,12 +195,13 @@ int main()
         }
     }
     sleep_ms(100);
-    printf("   LED Timer setup OK\n");
-    sleep_ms(100);
-
-
-    gpio_put(PICO_DEFAULT_LED_PIN, true);// Turn the LED on
-
+#if false    
+    while(1)
+    {
+        printf("   LED Timer setup OK\n");
+        sleep_ms(1000);
+    }
+#endif
     uint32_t initialSlotOffset;
     int messageCounter = 0;
 
@@ -243,25 +239,24 @@ int main()
     else
     {
         // block waiting for button to start
-        printf("\nUsing external button to start Tx\n");
+        printf("\nUsing external button or keypress to start Tx\n");
         while(!gpio_get(BTN_PIN))
         {
             sleep_ms(1);
             messageCounter++;
             if ((messageCounter % 1000) == 0)
             {
-                printf("Waiting for button\n");
+                printf("Waiting for button or keypress\n");
             }
         }
 
-        printf("\nButton pressed\n");
+        printf("\nButton or key pressed\n");
 
 
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);
         ppsTriggered = true;
 
         printf("\nSetup 1 second timer\n");
-
 
         // use frequency calibration ppm value, because it will also affect the timers.
         // However to increase the timer frequency, the callback time needs to be reduced instead of increased in the case of the frequency
@@ -306,7 +301,6 @@ int main()
 
         WSPRbeaconTxScheduler(true);
         ppsTriggered = false;
-
 
 
 #if (defined(DEBUG) && false)
