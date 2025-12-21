@@ -288,6 +288,7 @@ int main()
 
     while(true)
     {
+#ifdef  USE_GPS_LOCATION
         if(pWB->_txSched._u8_tx_GPS_mandatory)
         {
             char newMaidenHead[16];
@@ -300,7 +301,7 @@ int main()
                 strncpy(newMaidenHead, lastMaidenHead, 16);
             }
         }
-
+#endif
         while(!ppsTriggered)
         {
             tight_loop_contents();
