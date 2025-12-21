@@ -81,14 +81,13 @@ volatile int32_t si32precise_cycles;
 /// @param gpio The GPIO of DCO output.
 /// @param cpuclkhz The system CPU clock freq., Hz.
 /// @return 0 if OK.
-int PioDCOInit(PioDco *pdco, int gpio, int cpuclkhz)
+int PioDCOInit(PioDco *pdco, int gpio)
 {
     assert_(pdco);
-    assert_(cpuclkhz);
-
+  
     memset(pdco, 0, sizeof(PioDco));
 
-    pdco->_clkfreq_hz = cpuclkhz;
+    //pdco->_clkfreq_hz = cpuclkhz;
     pdco->_pio = pio0;
     pdco->_gpio = gpio;
     pdco->_offset = pio_add_program(pdco->_pio, &dco_program);
@@ -118,12 +117,12 @@ int PioDCOInit(PioDco *pdco, int gpio, int cpuclkhz)
 int PioDCOSetFreq(PioDco *pdco, uint32_t ui32_frq_hz, int32_t ui32_frq_millihz)
 {
     assert_(pdco);
-    assert(pdco->_clkfreq_hz);
+    //assert(pdco->_clkfreq_hz);
 
     /* RPix: Calculate an accurate value of phase increment of the freq 
        per 1 tick of CPU clock, here 2^24 is scaling coefficient. */
     const int64_t i64denominator = 2000LL * (int64_t)ui32_frq_hz + (int64_t)ui32_frq_millihz;
-    pdco->_frq_cycles_per_pi = (int32_t)(((int64_t)pdco->_clkfreq_hz * (int64_t)(1<<24) * 1000LL
+    pdco->_frq_cycles_per_pi = (int32_t)(((int64_t)(PLL_SYS_MHZ * MHz) * (int64_t)(1<<24) * 1000LL
                                          +(i64denominator>>1)) / i64denominator);
 
     si32precise_cycles = pdco->_frq_cycles_per_pi - (PIOASM_DELAY_CYCLES<<24);

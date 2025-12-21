@@ -142,9 +142,17 @@ int main()
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
 
+
     printf("    Beacon initialised OK\n\n");
     sleep_ms(100);
+    printf("Start second CPU core for freqency generator... ");
+    sleep_ms(100);
 
+
+    multicore_launch_core1(Core1Entry);
+    
+    printf("  RF oscillator started OK\n\n");
+    sleep_ms(100);
     printf("Create beacon packet data..... ");
     sleep_ms(100);
 

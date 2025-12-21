@@ -70,7 +70,7 @@ void Core1Entry()
     assert_(p);
 
     /* Initialize DCO */
-    assert_(0 == PioDCOInit(p, pWSPR->_pTX->_i_tx_gpio, clkhz));
+    assert_(0 == PioDCOInit(p, pWSPR->_pTX->_i_tx_gpio));
 
     /* Set initial freq. */
     assert_(0 == PioDCOSetFreq(p, pWSPR->_pTX->_u32_Txfreqhz, 0U));

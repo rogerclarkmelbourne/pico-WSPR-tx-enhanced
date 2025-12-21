@@ -100,7 +100,7 @@ typedef struct
 
     uint32_t _ui32_pioreg[8];   /* Shift register to PIO. */
 
-    uint32_t _clkfreq_hz;       /* CPU CLK freq, Hz. */
+ //   uint32_t _clkfreq_hz;       /* CPU CLK freq, Hz. */
 
     GPStimeContext *_pGPStime;  /* Ptr to GPS time context. */
 
@@ -110,7 +110,7 @@ typedef struct
 
 } PioDco;
 
-int PioDCOInit(PioDco *pdco, int gpio, int cpuclkhz);
+int PioDCOInit(PioDco *pdco, int gpio);
 int PioDCOSetFreq(PioDco *pdco, uint32_t u32_frq_hz, int32_t u32_frq_millihz);
 int32_t PioDCOGetFreqShiftMilliHertz(const PioDco *pdco, uint64_t u64_desired_frq_millihz);
 
