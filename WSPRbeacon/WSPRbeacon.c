@@ -122,14 +122,12 @@ int WSPRbeaconCreatePacket(bool sendLongLocator)
     if (sendLongLocator && (strlen(becaconData._pu8_locator) == 6))
     {
         sprintf(callsignBuf, "<%s>",becaconData._pu8_callsign);
-        printf("Encode callsign %s\n",callsignBuf);
         wspr_encode(callsignBuf, becaconData._pu8_locator, becaconData._u8_txpower, becaconData._pu8_outbuf);
     }
     else
     {
         wspr_encode(becaconData._pu8_callsign, becaconData._pu8_locator, becaconData._u8_txpower, becaconData._pu8_outbuf); 
     }
-
 
     return 0;
 }
@@ -189,7 +187,7 @@ int WSPRbeaconTxScheduler(int verbose)
     
     if (debugPrint)
     {
-        printf("Slot %d. Seconds %d. %s\n" , islot_modulo, secsIntoCurrentSlot, itx_trigger?"Tx":"Rx");
+        printf("Slot %d:%d %s\n" , islot_modulo, secsIntoCurrentSlot, itx_trigger?"Tx":"Rx");
     }
 
     if(0 == islot_modulo)

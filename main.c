@@ -107,25 +107,28 @@ int main()
     int cdcTimeoutCounter = 0;
     bool buttonHeldAtBoot = gpio_get(BTN_PIN);
     
-#ifdef DEBUG
-    while (!tud_cdc_connected()) 
+#ifdef DEBUG_PRINT
+    int cdcWaitCounter = 0;
+    // wait maximum of 20 seconds to serial terminal
+    while (!tud_cdc_connected() & (cdcWaitCounter++ < 20)) 
     {
         sleep_ms(1000);  
     }
-    
-    printf("USB Serial connected\n");
 #endif    
 
-
+#ifdef DEBUG_PRINT
     printf("Check Settings ..... \n");
+#endif
 
     handleSettings(buttonHeldAtBoot);
 
+#ifdef DEBUG_PRINT
     sleep_ms(100);
     printf("Settings are OK\n\n");
     sleep_ms(100);
     printf("Initalise Beacon...     ");
     sleep_ms(100);
+#endif
 
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
@@ -142,49 +145,50 @@ int main()
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
 
-
+#ifdef DEBUG_PRINT
     printf("    Beacon initialised OK\n\n");
     sleep_ms(100);
     printf("Start second CPU core for freqency generator... ");
     sleep_ms(100);
-
+#endif
 
     multicore_launch_core1(Core1Entry);
-    
+   
+#ifdef DEBUG_PRINT    
     printf("  RF oscillator started OK\n\n");
     sleep_ms(100);
     printf("Create beacon packet data..... ");
     sleep_ms(100);
+#endif
 
     WSPRbeaconCreatePacket(false);// first transmission must not be encoded with 6 fig locator
     
-    
+#ifdef DEBUG_PRINT        
     sleep_ms(100);
     printf("Beacon packet created OK\n");
     sleep_ms(100);
+#endif
 
     pWB->_pTX->_p_oscillator->_pGPStime= &gTimeContext;
 
     if (settingsData.gpsMode == GPS_MODE_ON)
     {
-
+#ifdef DEBUG_PRINT    
         printf("Init GPS\n");
-
+#endif
         GPStimeInit(0, 9600, GPS_PPS_PIN);
-        sleep_ms(5000);// GPS should send data at least once per second. 
+        sleep_ms(3000);// GPS should send data at least once per second. 
     }
     else
     {
         pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived = false;
-        printf("IGNORE GPS\n");
-        sleep_ms(100);
     }
 
 
-    printf("Start LED flashing timer at interval of 1 seconds...  ");
+    printf("Start LED flashing timer at interval of 2 seconds...  ");
     sleep_ms(100);
     // very slow flash
-    if (!add_repeating_timer_us(-1000000, ledTimer_callback, NULL, &ledFlashTimer))
+    if (!add_repeating_timer_us(-2000000, ledTimer_callback, NULL, &ledFlashTimer))
     {
         while(true)
         {
@@ -192,22 +196,12 @@ int main()
             sleep_ms(1000);
         }
     }
-    sleep_ms(100);
-#if false    
-    while(1)
-    {
-        printf("   LED Timer setup OK\n");
-        sleep_ms(1000);
-    }
-#endif
+
     uint32_t initialSlotOffset;
     int messageCounter = 0;
 
     if (pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived)
     {
-        printf("Using GPS..\n");
-
-
         pWB->_txSched._u8_tx_GPS_mandatory = true; 
 
         if (!ppsTriggered)
@@ -219,16 +213,20 @@ int main()
         {
             while(!ppsTriggered)
             {
+#ifdef DEBUG_PRINT                    
                 messageCounter++;
                 if ((messageCounter % 1000) == 0)
                 {
                     printf(".");
                 }
+#endif                
                 sleep_ms(1);
             }
             ppsTriggered = false;
         }
+#ifdef DEBUG_PRINT            
         printf("\nPPS received\n");
+#endif        
         // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;  
          
@@ -237,7 +235,6 @@ int main()
     else
     {
         // block waiting for button to start
-        printf("\nUsing external button or keypress to start Tx\n");
         while(!gpio_get(BTN_PIN))
         {
             sleep_ms(1);
@@ -247,14 +244,12 @@ int main()
                 printf("Waiting for button or keypress\n");
             }
         }
-
+#ifdef DEBUG_PRINT    
         printf("\nButton or key pressed\n");
-
+#endif
 
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);
         ppsTriggered = true;
-
-        printf("\nSetup 1 second timer\n");
 
         // use frequency calibration ppm value, because it will also affect the timers.
         // However to increase the timer frequency, the callback time needs to be reduced instead of increased in the case of the frequency
@@ -263,7 +258,7 @@ int main()
         {
             while(true)
             {
-                printf("Failed to add timer\n");
+                printf("Failed to add one second timer\n");
                 sleep_ms(1000);
             }
         }
@@ -271,8 +266,6 @@ int main()
 
     srand(get_absolute_time());// For frequency hopping
 
-
-    printf("\nEnable watchdog with 10 second timeout\n");
     watchdog_enable(10000, 1);
     int tick = 0;
 
@@ -295,7 +288,7 @@ int main()
             newMaidenHead[6] = 0x00;
             if(strcmp(newMaidenHead, pWB->_pu8_locator) != 0)
             {
-                #ifdef DEBUG
+                #ifdef DEBUG_PRINT
                     printf("Updating location from GPS %s != %s\n", newMaidenHead, pWB->_pu8_locator);
                 #endif
                 strcpy(pWB->_pu8_locator, newMaidenHead);
@@ -309,14 +302,12 @@ int main()
         }
 
         watchdog_update();
-
-        WSPRbeaconTxScheduler(true);
-        ppsTriggered = false;
-
-
-#if (defined(DEBUG) && false)
-        if(0 == ++tick % 60)
-            WSPRbeaconDumpContext(pWB);
+#ifdef DEBUG_PRINT
+const bool debugMessages = true;
+#else
+const bool debugMessages = false;
 #endif
+        WSPRbeaconTxScheduler(debugMessages);
+        ppsTriggered = false;
     }
 }
