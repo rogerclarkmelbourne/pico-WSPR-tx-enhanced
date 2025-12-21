@@ -165,7 +165,7 @@ int main()
 
     pWB->_pTX->_p_oscillator->_pGPStime= &gTimeContext;
 
-    if (settingsData.gpsMode == GPS_MODE_AUTO)
+    if (settingsData.gpsMode == GPS_MODE_ON)
     {
 
         printf("Init GPS\n");

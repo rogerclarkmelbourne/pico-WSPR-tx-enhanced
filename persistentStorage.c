@@ -98,7 +98,7 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.slotSkip           =   1;// Every other slot
         settingsData.gpioPin            = RFOUT_PIN;
         settingsData.frequencyHop       = false;
-        settingsData.gpsMode            = GPS_MODE_AUTO;
+        settingsData.gpsMode            = GPS_MODE_ON;
         settingsData.initialOffsetInWSPRFreqRange = 0;
         settingsData.outputPowerDbm = 13;
 
@@ -190,9 +190,6 @@ bool settingsCheckSettings(void)
     {
         case GPS_MODE_OFF:
             msg = "Off";
-            break;
-        case GPS_MODE_AUTO:
-             msg = "Auto";
             break;
         case GPS_MODE_ON:
             msg = "On";
@@ -421,10 +418,10 @@ void handleSettings(bool forceSettingsEntry)
                                                     }
                                                     else
                                                     {
-                                                        if (strcmp(value,"AUTO") == 0)
+                                                        if (strcmp(value,"ON") == 0)
                                                         {
-                                                            settingsData.gpsMode = GPS_MODE_AUTO;
-                                                            printf("\nSetting GPS mode to AUTO\n");
+                                                            settingsData.gpsMode = GPS_MODE_ON;
+                                                            printf("\nSetting GPS mode to ON\n");
                                                         }
                                                     }
 

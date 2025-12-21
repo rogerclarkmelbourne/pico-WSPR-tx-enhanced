@@ -29,7 +29,7 @@ typedef struct  {
 
 } SettingsData;
 
-enum gpsModes {GPS_MODE_OFF = 0,GPS_MODE_AUTO = 1,GPS_MODE_ON = 2};
+enum gpsModes {GPS_MODE_OFF = 0, GPS_MODE_ON = 1};
 extern SettingsData settingsData;
 
 // Use last sector at the top of flash for storage

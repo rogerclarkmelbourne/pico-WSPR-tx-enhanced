@@ -58,7 +58,7 @@
 #include <piodco.h>
 
 // Signals are always within a 200Hz frequench range , but modulation is 6Hz wide and allow for inaccurate crystals on the Pico
-#define WSPR_FREQ_RANGE_HZ  180
+#define WSPR_FREQ_RANGE_HZ  200
 
 typedef struct
 {

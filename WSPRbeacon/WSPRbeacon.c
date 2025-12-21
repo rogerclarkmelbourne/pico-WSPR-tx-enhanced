@@ -211,7 +211,7 @@ int WSPRbeaconTxScheduler(int verbose)
                 {
                     // Set the freq of the next transmission now.
                     const int FREQ_STEP_SIZE = 5;// Hz
-                    const int rangeInHzSteps = WSPR_FREQ_RANGE_HZ / FREQ_STEP_SIZE;
+                    const int rangeInHzSteps = (WSPR_FREQ_RANGE_HZ - 10) / FREQ_STEP_SIZE;// The -10 is so that the freq hot doesn't use the 5Hz at the top and bottom of the range as the modulation is 6Hz wide
                     int r,offset;
                     do
                     {
