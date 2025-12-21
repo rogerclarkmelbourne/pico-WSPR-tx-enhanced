@@ -25,7 +25,8 @@ typedef struct  {
     int32_t     gpioPin; 
     int32_t     initialOffsetInWSPRFreqRange;
     uint32_t    outputPowerDbm;
-    int32_t     frequencyHop;
+    uint32_t    frequencyHop;
+    uint32_t    gpsLocation;
 
 } SettingsData;
 

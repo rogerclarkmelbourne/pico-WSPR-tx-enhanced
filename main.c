@@ -278,30 +278,31 @@ int main()
 
     char lastMaidenHead[16];
     lastMaidenHead[0] = 0;
-    if(pWB->_txSched._u8_tx_GPS_mandatory)
+    if(pWB->_txSched._u8_tx_GPS_mandatory && settingsData.gpsLocation)
     {
-        strncpy( lastMaidenHead, WSPRbeaconGetLastQTHLocator(),16);
-        strncpy(pWB->_pu8_locator, lastMaidenHead, 4);
-        pWB->_pu8_locator[5] = 0x00;
+        strcpy(lastMaidenHead, WSPRbeaconGetLastQTHLocator());
+        strcpy(pWB->_pu8_locator, lastMaidenHead);
+        pWB->_pu8_locator[4] = 0x00;
         WSPRbeaconCreatePacket();
     }
 
     while(true)
     {
-#ifdef  USE_GPS_LOCATION
-        if(pWB->_txSched._u8_tx_GPS_mandatory)
+        if(pWB->_txSched._u8_tx_GPS_mandatory && settingsData.gpsLocation)
         {
             char newMaidenHead[16];
-            strncpy( newMaidenHead, WSPRbeaconGetLastQTHLocator(),16);
-            if(strcpy(newMaidenHead, lastMaidenHead) !=0)
+            strcpy(newMaidenHead, WSPRbeaconGetLastQTHLocator());
+            newMaidenHead[4] = 0x00;
+            if(strcmp(newMaidenHead, pWB->_pu8_locator) != 0)
             {
-                strncpy(pWB->_pu8_locator, newMaidenHead, 4);
-                pWB->_pu8_locator[5] = 0x00;
+                #ifdef DEBUG
+                    printf("Updating location from GPS %s != %s\n", newMaidenHead, pWB->_pu8_locator);
+                #endif
+                strcpy(pWB->_pu8_locator, newMaidenHead);
                 WSPRbeaconCreatePacket();
-                strncpy(newMaidenHead, lastMaidenHead, 16);
             }
         }
-#endif
+
         while(!ppsTriggered)
         {
             tight_loop_contents();

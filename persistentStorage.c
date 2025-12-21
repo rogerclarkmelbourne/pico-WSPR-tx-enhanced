@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x05;
+const uint32_t  CURRENT_VERSION = 0x06;
 
 SettingsData settingsData;
 
@@ -101,6 +101,7 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.gpsMode            = GPS_MODE_ON;
         settingsData.initialOffsetInWSPRFreqRange = 0;
         settingsData.outputPowerDbm = 13;
+        settingsData.gpsLocation = 0;
 
         settingsWriteToFlash();
         printf("\n\nSettings have been reset\n\n");
@@ -184,6 +185,7 @@ bool settingsCheckSettings(void)
 
     printf("POWER:%d\n", settingsData.outputPowerDbm);
 
+    printf("GPSLOCATION:%s\n", settingsData.gpsLocation?"YES":"NO");
 
     char *msg;
     switch(settingsData.gpsMode)
@@ -254,8 +256,8 @@ void handleSettings(bool forceSettingsEntry)
 
         while (true)
         {
-            printf("Firmware built %s %s\n", __TIME__, __DATE__);
-            printf("Clock speed %dMHz\n",PLL_SYS_MHZ);
+            printf("Firmware built %s %s\n\n\n", __TIME__, __DATE__);
+ 
             
             settingsCheckSettings();
             
@@ -430,10 +432,27 @@ void handleSettings(bool forceSettingsEntry)
                                                 else
                                                 {
                                                     if (strcmp("POWER", key) == 0)
-                                                        {
-                                                            settingsData.outputPowerDbm = atoi(value);
+                                                    {
+                                                        settingsData.outputPowerDbm = atoi(value);
 
-                                                            printf("\nSetting Power to %d dBm\n",settingsData.outputPowerDbm);
+                                                        printf("\nSetting Power to %d dBm\n",settingsData.outputPowerDbm);
+
+                                                        settingsAreDirty = true;
+                                                    }
+                                                    else
+                                                    {
+                                                        if (strcmp("GPSLOCATION", key) == 0)
+                                                        {
+                                                            if (strcmp(value,"ON") == 0)
+                                                            {
+                                                                settingsData.gpsLocation = 1;
+                                                                printf("\nSetting GPS location to ON\n");
+                                                            }
+                                                            else
+                                                            {
+                                                                settingsData.gpsLocation = 0;
+                                                                printf("\nSetting GPS location to OFF\n");
+                                                            }
 
                                                             settingsAreDirty = true;
                                                         }
@@ -441,6 +460,7 @@ void handleSettings(bool forceSettingsEntry)
                                                         {
                                                             printf("Uknown setting\n");
                                                         }
+                                                    }
                                                 }
                                             }
                                         }
