@@ -90,7 +90,7 @@ typedef struct
     uint8_t _u8_is_solution_active;             /* A navigation solution is valid. */
     uint32_t _u32_utime_nmea_last;              /* The last unix time received from GPS. */
     uint64_t _u64_sysclk_nmea_last;             /* The sysclk of the last unix time received. */
-    int64_t _i64_lat_100k, _i64_lon_100k;       /* The lat, lon, degrees, multiplied by 1e5. */
+    double lat, lon;                            /* The lat, lon, degrees */
     uint32_t _u32_nmea_gprmc_count;             /* The count of $GPRMC sentences received */
 
     uint64_t _u64_sysclk_pps_last;              /* The sysclk of the last rising edge of PPS. */

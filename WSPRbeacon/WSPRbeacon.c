@@ -274,11 +274,8 @@ char *WSPRbeaconGetLastQTHLocator(void)
     assert_(becaconData._pTX);
     assert_(becaconData._pTX->_p_oscillator);
     assert_(becaconData._pTX->_p_oscillator->_pGPStime);
-    
-    const double lat = 1e-5 * (double)becaconData._pTX->_p_oscillator->_pGPStime->_time_data._i64_lat_100k;
-    const double lon = 1e-5 * (double)becaconData._pTX->_p_oscillator->_pGPStime->_time_data._i64_lon_100k;
 
-    return get_mh(lat, lon, 8);
+    return get_mh(becaconData._pTX->_p_oscillator->_pGPStime->_time_data.lat, becaconData._pTX->_p_oscillator->_pGPStime->_time_data.lon, 8);
 }
 
 uint8_t WSPRbeaconIsGPSsolutionActive(void)

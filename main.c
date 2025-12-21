@@ -180,10 +180,8 @@ int main()
         sleep_ms(100);
     }
 
-    printf("Turn on the LED\n");
-    gpio_put(PICO_DEFAULT_LED_PIN, true);
 
-    printf("Start LED flashing timer at interval of 4 seconds...  ");
+    printf("Start LED flashing timer at interval of 1 seconds...  ");
     sleep_ms(100);
     // very slow flash
     if (!add_repeating_timer_us(-1000000, ledTimer_callback, NULL, &ledFlashTimer))
@@ -278,19 +276,30 @@ int main()
     watchdog_enable(10000, 1);
     int tick = 0;
 
+    char lastMaidenHead[16];
+    lastMaidenHead[0] = 0;
+    if(pWB->_txSched._u8_tx_GPS_mandatory)
+    {
+        strncpy( lastMaidenHead, WSPRbeaconGetLastQTHLocator(),16);
+        strncpy(pWB->_pu8_locator, lastMaidenHead, 4);
+        pWB->_pu8_locator[5] = 0x00;
+        WSPRbeaconCreatePacket();
+    }
+
     while(true)
     {
-        /*
-        if(WSPRbeaconIsGPSsolutionActive())
+        if(pWB->_txSched._u8_tx_GPS_mandatory)
         {
-            const char *pgps_qth = WSPRbeaconGetLastQTHLocator();
-            if(pgps_qth)
+            char newMaidenHead[16];
+            strncpy( newMaidenHead, WSPRbeaconGetLastQTHLocator(),16);
+            if(strcpy(newMaidenHead, lastMaidenHead) !=0)
             {
-                strncpy(pWB->_pu8_locator, pgps_qth, 4);
+                strncpy(pWB->_pu8_locator, newMaidenHead, 4);
                 pWB->_pu8_locator[5] = 0x00;
+                WSPRbeaconCreatePacket();
+                strncpy(newMaidenHead, lastMaidenHead, 16);
             }
         }
-        */
 
         while(!ppsTriggered)
         {

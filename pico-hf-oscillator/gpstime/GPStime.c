@@ -251,26 +251,34 @@ int GPStimeProcNMEAsentence(void)
 
         if(gTimeContext._time_data._u8_is_solution_active)
         {
-            gTimeContext._time_data._i64_lat_100k = (int64_t)(.5f + 1e5 * atof((const char *)prmc + u8ixcollector[2]));
-            if('N' == prmc[u8ixcollector[3]]) { }
-            else if('S' == prmc[u8ixcollector[3]])
+            double tmp = atof((const char *)prmc + u8ixcollector[2]);
+ 
+            int intPart = (int)tmp;
+            double mins = (intPart % 100);
+            int degs = intPart / 100;
+            double degMins = tmp - intPart;
+
+            mins = mins + degMins;
+            gTimeContext._time_data.lat = (double) degs + mins/60.f;
+            
+            if('S' == prmc[u8ixcollector[3]]) 
             {
-                INVERSE(gTimeContext._time_data._i64_lat_100k);
-            }
-            else
-            {
-                return -2;
+                gTimeContext._time_data.lat *= -1;// South are negative deg
             }
 
-            gTimeContext._time_data._i64_lon_100k = (int64_t)(.5f + 1e5 * atof((const char *)prmc + u8ixcollector[4]));
-            if('E' == prmc[u8ixcollector[5]]) { }
-            else if('W' == prmc[u8ixcollector[5]])
+            tmp = atof((const char *)prmc + u8ixcollector[4]);
+
+            intPart = (int)tmp;
+            mins = (intPart % 100);
+            degs = intPart / 100;
+            degMins = tmp - intPart;
+
+            mins = mins + degMins;
+            gTimeContext._time_data.lon = (double) degs + mins/60.f;
+            
+            if('E' == prmc[u8ixcollector[3]]) 
             {
-                INVERSE(gTimeContext._time_data._i64_lon_100k);
-            }
-            else
-            {
-                return -3;
+                gTimeContext._time_data.lon *= -1;// South are negative deg
             }
 
             if('*' != prmc[u8ixcollector[paramaterCount] + 1])
@@ -325,7 +333,7 @@ void GPStimeDump(const GPStimeData *pd)
     printf("GPRMC count:%lu\n", pd->_u32_nmea_gprmc_count);
     printf("NMEA unixtime last:%lu\n", pd->_u32_utime_nmea_last);
     printf("NMEA sysclock last:%llu\n", pd->_u64_sysclk_nmea_last);
-    printf("GPS Latitude:%lld Longtitude:%lld\n", pd->_i64_lat_100k, pd->_i64_lon_100k);
+    printf("GPS Latitude:%d Longtitude:%d\n", pd->lat, pd->lon);
     printf("PPS sysclock last:%llu\n", pd->_u64_sysclk_pps_last);
     printf("PPS period *1e6:%llu\n", (pd->_u64_pps_period_1M + (eSlidingLen>>1)) / eSlidingLen);
     printf("FRQ correction ppb:%lld\n\n", pd->_i32_freq_shift_ppb);
