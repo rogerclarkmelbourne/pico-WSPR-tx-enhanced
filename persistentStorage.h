@@ -21,12 +21,13 @@ typedef struct  {
     uint8_t     locator[16];
     int32_t     bandsBitPattern;
     uint8_t     slotSkip;
-    int32_t     gpsMode;   
-    int32_t     gpioPin; 
+    uint32_t     gpsMode;   
+    uint32_t     gpioPin; 
     int32_t     initialOffsetInWSPRFreqRange;
     uint32_t    outputPowerDbm;
     uint32_t    frequencyHop;
     uint32_t    gpsLocation;
+    uint32_t    longLocator;
 
 } SettingsData;
 

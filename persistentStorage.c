@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x06;
+const uint32_t  CURRENT_VERSION = 0x07;
 
 SettingsData settingsData;
 
@@ -102,15 +102,16 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.initialOffsetInWSPRFreqRange = 0;
         settingsData.outputPowerDbm = 13;
         settingsData.gpsLocation = 0;
+        settingsData.longLocator = 0;
 
         settingsWriteToFlash();
-        printf("\n\nSettings have been reset\n\n");
+//        printf("\n\nSettings have been reset\n\n");
     }
 }
 
 void settingsWriteToFlash(void)
 {
-    printf("Storing settings in Flash memory\n");
+//    printf("Storing settings in Flash memory\n");
     uint32_t interrupts = save_and_disable_interrupts();
     
     flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE ); 
@@ -181,11 +182,13 @@ bool settingsCheckSettings(void)
 
     printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
 
-    printf("FREQHOP:%s\n", settingsData.frequencyHop?"YES":"NO");
+    printf("FREQHOP:%s\n", settingsData.frequencyHop?"On":"Off");
 
     printf("POWER:%d\n", settingsData.outputPowerDbm);
 
-    printf("GPSLOCATION:%s\n", settingsData.gpsLocation?"YES":"NO");
+    printf("GPSLOCATION:%s\n", settingsData.gpsLocation?"On":"Off");
+
+    printf("LONGLOCATOR:%s\n", settingsData.longLocator?"On":"Off");
 
     char *msg;
     switch(settingsData.gpsMode)
@@ -197,7 +200,7 @@ bool settingsCheckSettings(void)
             msg = "On";
             break;
     }
-    printf("GPS: %d %s\n", settingsData.gpsMode, msg);
+    printf("GPS: %s\n", msg);
 
     return retVal;
 }
@@ -247,7 +250,6 @@ void handleSettings(bool forceSettingsEntry)
 {
     settingsReadFromFlash(false);
     
-
     if (!settingsCheckSettings() || forceSettingsEntry)
     {
         char key[MAX_KEY];
@@ -310,7 +312,7 @@ void handleSettings(bool forceSettingsEntry)
 
             if (strcmp(line,"RESET") == 0)
             {
-                printf("Clearning settings.\n");
+                printf("Clearing settings.\n");
                 settingsReadFromFlash(true);
                 settingsCheckSettings();
             }
@@ -406,7 +408,7 @@ void handleSettings(bool forceSettingsEntry)
                                             {
                                                 settingsData.frequencyHop = (strcmp(value,"ON") == 0);
 
-                                                printf("\nSetting frequency hop to %s\n",settingsData.frequencyHop?"ON":"OFF");
+                                                printf("\nSetting frequency hop to %s\n",settingsData.frequencyHop?"On":"Off");
                                                 settingsAreDirty = true;
                                             }
                                             else
@@ -416,14 +418,14 @@ void handleSettings(bool forceSettingsEntry)
                                                     if (strcmp(value,"OFF") == 0)
                                                     {
                                                         settingsData.gpsMode = GPS_MODE_OFF;
-                                                        printf("\nSetting GPS mode to OFF\n");
+                                                        printf("\nSetting GPS mode to Off\n");
                                                     }
                                                     else
                                                     {
                                                         if (strcmp(value,"ON") == 0)
                                                         {
                                                             settingsData.gpsMode = GPS_MODE_ON;
-                                                            printf("\nSetting GPS mode to ON\n");
+                                                            printf("\nSetting GPS mode to On\n");
                                                         }
                                                     }
 
@@ -446,19 +448,37 @@ void handleSettings(bool forceSettingsEntry)
                                                             if (strcmp(value,"ON") == 0)
                                                             {
                                                                 settingsData.gpsLocation = 1;
-                                                                printf("\nSetting GPS location to ON\n");
+                                                                printf("\nSetting GPS location to On\n");
                                                             }
                                                             else
                                                             {
                                                                 settingsData.gpsLocation = 0;
-                                                                printf("\nSetting GPS location to OFF\n");
+                                                                printf("\nSetting GPS location to Off\n");
                                                             }
 
                                                             settingsAreDirty = true;
                                                         }
                                                         else
                                                         {
-                                                            printf("Uknown setting\n");
+                                                            if (strcmp("LONGLOCATOR", key) == 0)
+                                                            {
+                                                                if (strcmp(value,"ON") == 0)
+                                                                {
+                                                                    settingsData.longLocator = 1;
+                                                                    printf("\nSetting Long Locator to On\n");
+                                                                }
+                                                                else
+                                                                {
+                                                                    settingsData.longLocator = 0;
+                                                                    printf("\nSetting Long Locator to Off\n");
+                                                                }
+
+                                                                settingsAreDirty = true;
+                                                            }
+                                                            else
+                                                            {
+                                                                printf("Uknown setting\n");
+                                                            }
                                                         }
                                                     }
                                                 }

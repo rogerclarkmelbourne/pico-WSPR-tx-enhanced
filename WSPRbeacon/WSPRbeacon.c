@@ -230,8 +230,11 @@ int WSPRbeaconTxScheduler(int verbose)
                     printf("Offset frequency %d Hz\n",offset);
                     TxChannelSetOffsetFrequency(offset);
                 }
-                becaconData.longLocatorPhase++;
-                WSPRbeaconCreatePacket(becaconData.longLocatorPhase & 0x01);
+                if (settingsData.longLocator)
+                {
+                    becaconData.longLocatorPhase++;
+                    WSPRbeaconCreatePacket(becaconData.longLocatorPhase & 0x01);
+                }
 
                 itx_trigger = 0;
             }

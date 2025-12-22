@@ -107,10 +107,12 @@ int main()
     int cdcTimeoutCounter = 0;
     bool buttonHeldAtBoot = gpio_get(BTN_PIN);
     
+#define DEBUG_PRINT
+
 #ifdef DEBUG_PRINT
     int cdcWaitCounter = 0;
-    // wait maximum of 20 seconds to serial terminal
-    while (!tud_cdc_connected() & (cdcWaitCounter++ < 20)) 
+    // wait maximum of 10 seconds to serial terminal
+    while (!tud_cdc_connected() & (cdcWaitCounter++ < 10)) 
     {
         sleep_ms(1000);  
     }
