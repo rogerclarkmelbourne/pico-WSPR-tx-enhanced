@@ -95,7 +95,7 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator, 0x00, 16);// completely erase
-        settingsData.slotSkip           =   1;// Every other slot
+        settingsData.slotSkip           =   4;// Every 5th slot
         settingsData.gpioPin            = RFOUT_PIN;
         settingsData.frequencyHop       = false;
         settingsData.gpsMode            = GPS_MODE_ON;
