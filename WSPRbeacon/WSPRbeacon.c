@@ -87,7 +87,7 @@ WSPRbeaconContext * WSPRbeaconInit(const char *pcallsign, const char *pgridsquar
     strncpy(becaconData._pu8_locator, pgridsquare, sizeof(becaconData._pu8_locator));
     becaconData._u8_txpower = txpow_dbm;
 
-    becaconData._pTX = TxChannelInit(682667, 0);
+    becaconData._pTX = TxChannelInit(682667, 0);// 682667 is WSPR symbol duration in microseconds
     if (!becaconData._pTX)
     {
         printf("Failed to initialise 'Channel' data.\nUnable to continue\n");
@@ -138,7 +138,7 @@ int WSPRbeaconCreatePacket(bool sendLongLocator)
 int WSPRbeaconSendPacket(void)
 {
     assert_(becaconData._pTX);
-    assert_(becaconData._pTX->_u32_Txfreqhz > 500 * kHz);
+    //assert_(becaconData._pTX->_u32_Txfreqhz > 500 * kHz);
 
     TxChannelClear(becaconData._pTX);
 

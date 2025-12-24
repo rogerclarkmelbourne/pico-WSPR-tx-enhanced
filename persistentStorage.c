@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x07;
+const uint32_t  CURRENT_VERSION = 0x09;
 
 SettingsData settingsData;
 
@@ -15,8 +15,9 @@ SettingsData settingsData;
 const uint32_t FLASH_TARGET_OFFSET = (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE);
 const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 
-const uint32_t bandNames[NUM_BANDS] = { 160, 80, 40, 30, 20, 17, 15, 12, 10};
+const uint32_t bandNames[NUM_BANDS] = { 630, 160, 80, 40, 30, 20, 17, 15, 12, 10};
 const uint32_t bandFrequencies[NUM_BANDS] = {
+          475600, 
          1838000,
          3570000,
          7040000,
@@ -91,7 +92,8 @@ void settingsReadFromFlash(bool forceReset)
     {   
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
-        settingsData.bandsBitPattern    =   0B100;// 40m
+        //settingsData.bandsBitPattern    =   0B100;// 40m
+        settingsData.bandIndex = 4;// 40m
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator, 0x00, 16);// completely erase
@@ -144,6 +146,8 @@ bool settingsCheckSettings(void)
     {
         printf("LOCATOR:%s\n",settingsData.locator);   
     }
+
+#ifdef BANDS_BIT_PATTERN    
     if (settingsData.bandsBitPattern == 0)
     {
         printf("Error: No bands set\n");
@@ -164,6 +168,10 @@ bool settingsCheckSettings(void)
         }
         printf("\n");
     }
+#endif
+
+    printf("Band: %dm\n",bandNames[settingsData.bandIndex]); 
+
 
     if (settingsData.slotSkip == -1)
     {
@@ -228,7 +236,7 @@ int bandIndexFromString(char *bandString)
 
     return -1; // band not found
 }
-
+#ifdef BANDS_BIT_PATTERN   
 int findNextBandIndex(int currentIndex)
 {
 
@@ -244,7 +252,7 @@ int findNextBandIndex(int currentIndex)
         bitPattern = bitPattern >> 1;
     }
 }
-
+#endif
 
 void handleSettings(bool forceSettingsEntry)
 {
@@ -344,13 +352,15 @@ void handleSettings(bool forceSettingsEntry)
                         {
                             int bandIndex = bandIndexFromString(value);
 
-                            if (bandIndex!= -1)
+                            if (bandIndex!= -1 && bandIndex < NUM_BANDS)
                             {
-
+                                settingsData.bandIndex = bandIndex;
+#ifdef BANDS_BIT_PATTERN   
                                 uint32_t pattern = 1 << bandIndex;
 
                                 settingsData.bandsBitPattern ^= pattern;
- 
+ #endif
+                                printf("\nSetting Band to %dm\n",bandNames[settingsData.bandIndex]); 
                                 settingsAreDirty = true;
                             }
                             else

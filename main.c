@@ -132,11 +132,12 @@ int main()
     sleep_ms(100);
 #endif
 
+
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
         settingsData.locator,/* the default QTH locator if GPS isn't used. */
         settingsData.outputPowerDbm,/* Tx power, dbm. */
-        bandFrequencies[findNextBandIndex(0)] + ((bandFrequencies[findNextBandIndex(0)] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
+        bandFrequencies[settingsData.bandIndex] + ((bandFrequencies[settingsData.bandIndex] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
         settingsData.initialOffsetInWSPRFreqRange,           /* the carrier freq. */
         settingsData.gpioPin       /* RF output GPIO pin. */
         );
@@ -243,11 +244,11 @@ int main()
             messageCounter++;
             if ((messageCounter % 1000) == 0)
             {
-                printf("Waiting for button or keypress\n");
+                printf("Waiting for button\n");
             }
         }
 #ifdef DEBUG_PRINT    
-        printf("\nButton or key pressed\n");
+        printf("\nButton pressed\n");
 #endif
 
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);

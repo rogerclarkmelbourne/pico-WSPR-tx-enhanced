@@ -8,7 +8,7 @@
 
 #define MAX_KEY 64
 #define MAX_VAL 256
-#define NUM_BANDS 9
+#define NUM_BANDS 10
 
 extern const uint64_t  MAGIC_NUMBER ;
 extern const uint32_t  CURRENT_VERSION;
@@ -19,7 +19,8 @@ typedef struct  {
     int32_t     freqCalibrationPPM;
     uint8_t     callsign[16];
     uint8_t     locator[16];
-    int32_t     bandsBitPattern;
+    //int32_t     bandsBitPattern;
+    uint32_t    bandIndex;
     uint8_t     slotSkip;
     uint32_t     gpsMode;   
     uint32_t     gpioPin; 

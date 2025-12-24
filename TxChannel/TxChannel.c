@@ -127,6 +127,7 @@ TxChannelContext * TxChannelInit(const uint32_t bit_period_us, uint8_t timer_ala
 
 void TxChannelSetFrequency(uint32_t dialFreq, uint32_t offsetFreq)
 {
+    printf("Set Freq & offset %d %d\n",dialFreq,offsetFreq);
     txChannelContext._u32_dialfreqhz = dialFreq;
     txChannelContext._u32_offsetfreqhz = offsetFreq;
     txChannelContext._u32_Txfreqhz =  txChannelContext._u32_dialfreqhz + (WSPR_FREQ_RANGE_HZ / 2) + txChannelContext._u32_offsetfreqhz;// set Tx freq to the middle of the WSPR Tx range +/- the offset
