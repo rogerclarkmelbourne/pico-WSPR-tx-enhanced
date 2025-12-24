@@ -93,7 +93,7 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
         //settingsData.bandsBitPattern    =   0B100;// 40m
-        settingsData.bandIndex = 4;// 40m
+        settingsData.bandIndex = 3;// 40m
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator, 0x00, 16);// completely erase
