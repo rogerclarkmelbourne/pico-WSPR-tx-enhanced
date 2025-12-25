@@ -109,7 +109,7 @@ int main()
     
 #define DEBUG_PRINT
 
-#ifdef DEBUG_PRINT
+#ifdef WAIT_DCD
     int cdcWaitCounter = 0;
     // wait maximum of 10 seconds to serial terminal
     while (!tud_cdc_connected() & (cdcWaitCounter++ < 10)) 

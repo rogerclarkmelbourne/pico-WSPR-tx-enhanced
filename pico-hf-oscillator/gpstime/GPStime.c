@@ -112,6 +112,12 @@ volatile bool ppsTriggered = false;
 void RAM (GPStimePPScallback)(uint gpio, uint32_t events)
 {   
     ppsTriggered = true;// used by the foreground loop
+
+#ifdef FIX_BUGS_IN_THIS    
+// VK3KYY
+// This functionality seems to have bugs in it which cause it to return huge positive numbers
+// So I have currently disabled it via the ifdef
+
     if(spGPStimeData)
     {    
         const uint64_t tm64 = GetUptime64();
@@ -138,6 +144,7 @@ void RAM (GPStimePPScallback)(uint gpio, uint32_t events)
             }
         }
 
+
 #ifdef NOP
         const int64_t dt_1M = (dt_per_window + (eSlidingLen >> 1)) / eSlidingLen;
         const uint64_t tmp = (spGPStimeData->_u64_pps_period_1M + (eSlidingLen >> 1)) / eSlidingLen;
@@ -146,6 +153,7 @@ void RAM (GPStimePPScallback)(uint gpio, uint32_t events)
 #endif
 
     }
+#endif    
 }
 
 /// @brief Calculates current unixtime using data available.

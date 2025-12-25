@@ -7,7 +7,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 0x09;
+const uint32_t  CURRENT_VERSION = 10;
 
 SettingsData settingsData;
 
@@ -15,7 +15,7 @@ SettingsData settingsData;
 const uint32_t FLASH_TARGET_OFFSET = (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE);
 const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 
-const uint32_t bandNames[NUM_BANDS] = { 630, 160, 80, 40, 30, 20, 17, 15, 12, 10};
+const uint32_t bandNames[NUM_BANDS] = { 630, 160, 80, 40, 30, 20};//, 17, 15, 12, 10};
 const uint32_t bandFrequencies[NUM_BANDS] = {
           475600, 
          1838000,
@@ -23,10 +23,10 @@ const uint32_t bandFrequencies[NUM_BANDS] = {
          7040000,
         10140100,
         14097000,
-        18106000,
+       /* 18106000,
         21096000,
         24926000,
-        28126000
+        28126000*/
 };
 
 
