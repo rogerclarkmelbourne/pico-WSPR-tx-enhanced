@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <piodco.h>
+// for USB CDX
+#include "tusb.h"
 
 #include "hardware/watchdog.h"
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 10;
+const uint32_t  CURRENT_VERSION = 11;
 
 SettingsData settingsData;
 
@@ -15,19 +17,32 @@ SettingsData settingsData;
 const uint32_t FLASH_TARGET_OFFSET = (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE);
 const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 
-const uint32_t bandNames[NUM_BANDS] = { 630, 160, 80, 40, 30, 20};//, 17, 15, 12, 10};
+#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_200MHZ
+const uint32_t bandNames[NUM_BANDS] = { 630, 160, 80, 40, 30, 20 };
 const uint32_t bandFrequencies[NUM_BANDS] = {
           475600, 
          1838000,
          3570000,
          7040000,
         10140100,
+        14097000
+};
+#endif
+
+#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_270MHZ
+const uint32_t bandNames[NUM_BANDS] = { 160, 80, 40, 30, 20, 17, 15, 12, 10 };
+const uint32_t bandFrequencies[NUM_BANDS] = {
+         1838000,
+         3570000,
+         7040000,
+        10140100,
         14097000,
-       /* 18106000,
+        18106000,
         21096000,
         24926000,
-        28126000*/
+        28126000
 };
+#endif
 
 
 
@@ -93,12 +108,20 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
         //settingsData.bandsBitPattern    =   0B100;// 40m
+#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_200MHZ
         settingsData.bandIndex = 3;// 40m
+#else
+    #if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_270MHZ
+            settingsData.bandIndex = 2;// 40m
+    #else
+        settingsData.bandIndex = 0; // default to the first band if some other overclocking has been specificied
+    #endif
+#endif
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator, 0x00, 16);// completely erase
         settingsData.slotSkip           =   4;// Every 5th slot
-        settingsData.gpioPin            = RFOUT_PIN;
+        settingsData.rfPin            = RFOUT_PIN;
         settingsData.frequencyHop       = false;
         settingsData.gpsMode            = GPS_MODE_ON;
         settingsData.initialOffsetInWSPRFreqRange = 0;
@@ -107,19 +130,15 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.longLocator = 0;
 
         settingsWriteToFlash();
-//        printf("\n\nSettings have been reset\n\n");
     }
 }
 
 void settingsWriteToFlash(void)
 {
-//    printf("Storing settings in Flash memory\n");
     uint32_t interrupts = save_and_disable_interrupts();
     
     flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE ); 
-
     flash_range_program(FLASH_TARGET_OFFSET, (const uint8_t *)&settingsData, FLASH_SECTOR_SIZE);
-
     restore_interrupts(interrupts);
 }
 
@@ -186,7 +205,7 @@ bool settingsCheckSettings(void)
 
     printf("CALPPM:%d\n", settingsData.freqCalibrationPPM);
 
-    printf("GPIOPIN:%d\n", settingsData.gpioPin);
+    printf("RFPIN:%d\n", settingsData.rfPin);
 
     printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
 
@@ -264,14 +283,19 @@ void handleSettings(bool forceSettingsEntry)
         char value[MAX_VAL];
         char line[100];
 
+        // If settings need to be update, we need to wait for the USB Serial terminal to be opened
+        while (!tud_cdc_connected()) 
+        {
+            sleep_ms(100);  
+        }
+  
+        printf("Firmware was built at %s on %s\n", __TIME__, __DATE__);        
+
         while (true)
         {
-            printf("Firmware built %s %s\n\n\n", __TIME__, __DATE__);
- 
-            
             settingsCheckSettings();
             
-            printf("Enter setting in the form SETTING VALUE\ne.g. CALLSIGN VK3KYY\n\n");
+            printf("Enter setting.  e.g. CALLSIGN VK3KYY\n\n");
 
             int idx = 0;
             for (;;)
@@ -396,11 +420,11 @@ void handleSettings(bool forceSettingsEntry)
                                 }
                                 else
                                 {
-                                    if (strcmp("GPIOPIN", key) == 0)
+                                    if (strcmp("RFPIN", key) == 0)
                                     {
-                                        settingsData.gpioPin = atoi(value);
+                                        settingsData.rfPin = atoi(value);
 
-                                        printf("\nSetting GPIO pin to %d ppm\n",settingsData.gpioPin);
+                                        printf("\nSetting RF pin to %d ppm\n",settingsData.rfPin);
                                         settingsAreDirty = true;
                                     }
                                     else

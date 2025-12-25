@@ -8,7 +8,14 @@
 
 #define MAX_KEY 64
 #define MAX_VAL 256
+
+#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_200MHZ
 #define NUM_BANDS 6
+#endif
+
+#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_270MHZ
+#define NUM_BANDS 9
+#endif
 
 extern const uint64_t  MAGIC_NUMBER ;
 extern const uint32_t  CURRENT_VERSION;
@@ -23,7 +30,7 @@ typedef struct  {
     uint32_t    bandIndex;
     uint8_t     slotSkip;
     uint32_t     gpsMode;   
-    uint32_t     gpioPin; 
+    uint32_t     rfPin; 
     int32_t     initialOffsetInWSPRFreqRange;
     uint32_t    outputPowerDbm;
     uint32_t    frequencyHop;

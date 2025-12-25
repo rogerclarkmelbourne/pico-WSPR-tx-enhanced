@@ -118,20 +118,7 @@ int main()
     }
 #endif    
 
-#ifdef DEBUG_PRINT
-    printf("Check Settings ..... \n");
-#endif
-
     handleSettings(buttonHeldAtBoot);
-
-#ifdef DEBUG_PRINT
-    sleep_ms(100);
-    printf("Settings are OK\n\n");
-    sleep_ms(100);
-    printf("Initalise Beacon...     ");
-    sleep_ms(100);
-#endif
-
 
     WSPRbeaconContext *pWB = WSPRbeaconInit(
         settingsData.callsign,/* the Callsign. */
@@ -139,7 +126,7 @@ int main()
         settingsData.outputPowerDbm,/* Tx power, dbm. */
         bandFrequencies[settingsData.bandIndex] + ((bandFrequencies[settingsData.bandIndex] / 1E6) * settingsData.freqCalibrationPPM),// bottom of WSPR freq range
         settingsData.initialOffsetInWSPRFreqRange,           /* the carrier freq. */
-        settingsData.gpioPin       /* RF output GPIO pin. */
+        settingsData.rfPin       /* RF output GPIO pin. */
         );
 
     
@@ -148,29 +135,10 @@ int main()
     pWB->_txSched._u8_tx_slot_skip      = settingsData.slotSkip + 1;
 
 
-#ifdef DEBUG_PRINT
-    printf("    Beacon initialised OK\n\n");
-    sleep_ms(100);
-    printf("Start second CPU core for freqency generator... ");
-    sleep_ms(100);
-#endif
-
     multicore_launch_core1(Core1Entry);
-   
-#ifdef DEBUG_PRINT    
-    printf("  RF oscillator started OK\n\n");
-    sleep_ms(100);
-    printf("Create beacon packet data..... ");
-    sleep_ms(100);
-#endif
 
     WSPRbeaconCreatePacket(false);// first transmission must not be encoded with 6 fig locator
-    
-#ifdef DEBUG_PRINT        
-    sleep_ms(100);
-    printf("Beacon packet created OK\n");
-    sleep_ms(100);
-#endif
+
 
     pWB->_pTX->_p_oscillator->_pGPStime= &gTimeContext;
 
@@ -180,16 +148,13 @@ int main()
         printf("Init GPS\n");
 #endif
         GPStimeInit(0, 9600, GPS_PPS_PIN);
-        sleep_ms(3000);// GPS should send data at least once per second. 
+        sleep_ms(2000);// GPS should send data at least once per second. 
     }
     else
     {
         pWB->_pTX->_p_oscillator->_pGPStime->GpsNmeaReceived = false;
     }
 
-
-    printf("Start LED flashing timer at interval of 2 seconds...  ");
-    sleep_ms(100);
     // very slow flash
     if (!add_repeating_timer_us(-2000000, ledTimer_callback, NULL, &ledFlashTimer))
     {
@@ -209,9 +174,9 @@ int main()
 
         if (!ppsTriggered)
         {
-            printf("PPS Wait....");
+            printf("Wait for GPS PPS pulses ....");
         }
-        // wait for 10 PPS pulses to guarantee stability
+        // wait for 2 PPS pulses to guarantee stability
         for (int i=0;i<2;i++)
         {
             while(!ppsTriggered)
@@ -228,7 +193,7 @@ int main()
             ppsTriggered = false;
         }
 #ifdef DEBUG_PRINT            
-        printf("\nPPS received\n");
+        printf("\nGPS PPS received\n");
 #endif        
         // PPS occurs at the start of the second before the RMC message is received, hence the actual time at PPS is + 1 second from the last nmea time
         int isec_of_hour = (pWB->_pTX->_p_oscillator->_pGPStime->_time_data._u32_utime_nmea_last + 1) % HOUR;  
@@ -247,9 +212,6 @@ int main()
                 printf("Waiting for button\n");
             }
         }
-#ifdef DEBUG_PRINT    
-        printf("\nButton pressed\n");
-#endif
 
         pWB->initialSlotOffset = (settingsData.slotSkip + 1);
         ppsTriggered = true;
