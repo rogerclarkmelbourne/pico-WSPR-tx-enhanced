@@ -17,19 +17,6 @@ SettingsData settingsData;
 const uint32_t FLASH_TARGET_OFFSET = (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE);
 const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 
-#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_200MHZ
-const uint32_t bandNames[NUM_BANDS] = { 630, 160, 80, 40, 30, 20 };
-const uint32_t bandFrequencies[NUM_BANDS] = {
-          475600, 
-         1838000,
-         3570000,
-         7040000,
-        10140100,
-        14097000
-};
-#endif
-
-#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_270MHZ
 const uint32_t bandNames[NUM_BANDS] = { 160, 80, 40, 30, 20, 17, 15, 12, 10 };
 const uint32_t bandFrequencies[NUM_BANDS] = {
          1838000,
@@ -42,9 +29,6 @@ const uint32_t bandFrequencies[NUM_BANDS] = {
         24926000,
         28126000
 };
-#endif
-
-
 
 /**
  * Parses a command of the form KEY=VALUE.
@@ -108,15 +92,7 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.magicNumber        =   MAGIC_NUMBER;
         settingsData.settingsVersion    =   CURRENT_VERSION;
         //settingsData.bandsBitPattern    =   0B100;// 40m
-#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_200MHZ
-        settingsData.bandIndex = 3;// 40m
-#else
-    #if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_270MHZ
-            settingsData.bandIndex = 2;// 40m
-    #else
-        settingsData.bandIndex = 0; // default to the first band if some other overclocking has been specificied
-    #endif
-#endif
+        settingsData.bandIndex = 2;// 40m
         settingsData.freqCalibrationPPM =   0;// Default this no calibration offset
         memset(settingsData.callsign, 0x00, 16);// completely erase
         memset(settingsData.locator, 0x00, 16);// completely erase

@@ -9,13 +9,7 @@
 #define MAX_KEY 64
 #define MAX_VAL 256
 
-#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_200MHZ
-#define NUM_BANDS 6
-#endif
-
-#if PLL_SYS_MHZ == PLL_SYS_MHZ_OVERCLOCK_270MHZ
 #define NUM_BANDS 9
-#endif
 
 extern const uint64_t  MAGIC_NUMBER ;
 extern const uint32_t  CURRENT_VERSION;
