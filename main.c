@@ -153,7 +153,7 @@ int main()
         sleep_ms(1000);  
     }
 #endif    
-buttonHeldAtBoot=true;
+
     handleSettings(buttonHeldAtBoot);
 
     pWB = WSPRbeaconInit(
