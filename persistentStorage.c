@@ -9,7 +9,7 @@
 #include "persistentStorage.h"
 
 const uint64_t  MAGIC_NUMBER    = 0x5069636F57535052;// 'PicoWSPR  
-const uint32_t  CURRENT_VERSION = 11;
+const uint32_t  CURRENT_VERSION = 14;
 
 SettingsData settingsData;
 
@@ -29,6 +29,8 @@ const uint32_t bandFrequencies[NUM_BANDS] = {
         24926000,
         28126000
 };
+
+const char *OPERATING_MODES[NUM_OPERATING_MODES] = {"WSPR","CW","SLOWMORSE","FT8","APRS"};
 
 /**
  * Parses a command of the form KEY=VALUE.
@@ -78,10 +80,6 @@ void convertToUpper(char str[])
     }
 }
 
-
-
-
-
 // Read settings from flash and set to default values if no valid settings were found
 void settingsReadFromFlash(bool forceReset)
 {
@@ -104,6 +102,9 @@ void settingsReadFromFlash(bool forceReset)
         settingsData.outputPowerDbm = 13;
         settingsData.gpsLocation = 0;
         settingsData.longLocator = 0;
+        settingsData.mode = MODE_CW_BEACON;
+        settingsData.cwSpeed = 5;
+        settingsData.txFreq = 7010000;//7.050Mhz        
 
         settingsWriteToFlash();
     }
@@ -165,29 +166,43 @@ bool settingsCheckSettings(void)
     }
 #endif
 
-    printf("Band: %dm\n",bandNames[settingsData.bandIndex]); 
-
-
-    if (settingsData.slotSkip == -1)
+    switch(settingsData.mode)
     {
-        printf("Error: SLOTSKIP not set\n");
-        retVal = false;
-    }
-    else
-    {
-        printf("SLOTSKIP:%d\n",settingsData.slotSkip);   
-    }
+        case MODE_WSPR:
+            printf("Band: %dm\n",bandNames[settingsData.bandIndex]); 
 
+            if (settingsData.slotSkip == -1)
+            {
+                printf("Error: SLOTSKIP not set\n");
+                retVal = false;
+            }
+            else
+            {
+                printf("SLOTSKIP:%d\n",settingsData.slotSkip);   
+            }
+
+            printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
+            printf("FREQHOP:%s\n", settingsData.frequencyHop?"On":"Off");
+            printf("POWER:%d\n", settingsData.outputPowerDbm);
+            break;
+        case MODE_CW_BEACON:
+        case MODE_SLOW_MORSE:
+            printf("TXFREQ:%d\n", settingsData.txFreq);
+            printf("CWSPEED:%d WPM\n", settingsData.cwSpeed);
+            break;         
+        case MODE_FT8:
+            break;    
+        case MODE_APRS:
+            printf("TXFREQ:%d\n", settingsData.txFreq);        
+            break;                  
+    }
 
     printf("CALPPM:%d\n", settingsData.freqCalibrationPPM);
 
     printf("RFPIN:%d\n", settingsData.rfPin);
 
-    printf("OFFSET:%d\n", settingsData.initialOffsetInWSPRFreqRange);
-
-    printf("FREQHOP:%s\n", settingsData.frequencyHop?"On":"Off");
-
-    printf("POWER:%d\n", settingsData.outputPowerDbm);
+  
+    printf("MODE:%s\n",OPERATING_MODES[settingsData.mode]);
 
     printf("GPSLOCATION:%s\n", settingsData.gpsLocation?"On":"Off");
 
@@ -204,6 +219,8 @@ bool settingsCheckSettings(void)
             break;
     }
     printf("GPS: %s\n", msg);
+
+
 
     return retVal;
 }
@@ -324,20 +341,52 @@ void handleSettings(bool forceSettingsEntry)
                 settingsReadFromFlash(true);
                 settingsCheckSettings();
             }
-
+            
             
             if (parse_kv(line, key, value)) 
             {
-                if (strcmp("CALLSIGN", key) == 0)
+                for(;;)
                 {
-                    strncpy(settingsData.callsign, value, 16);
 
-                    printf("\nSetting callsign to %s\n",settingsData.callsign);
+                    if (strcmp("MODE", key) == 0)
+                    {
+                        int newMode = -1;
 
-                    settingsAreDirty = true;
-                }
-                else
-                {
+                        for(int i=0;i<NUM_OPERATING_MODES;i++)
+                        {
+                            if (strcmp(OPERATING_MODES[i],value) == 0)
+                            {
+                                newMode = i;
+                                break;
+                            }
+                        }
+
+                        if (newMode != -1)
+                        {
+                            settingsData.mode = newMode;
+
+                            printf("\nSetting mode to %s\n",OPERATING_MODES[newMode]);
+
+                            settingsAreDirty = true;                        
+                        }
+                        else
+                        {
+                            printf("\nInvalid mode\n");
+                        }
+                        break;
+
+                    }
+
+                    if (strcmp("CALLSIGN", key) == 0)
+                    {
+                        strncpy(settingsData.callsign, value, 16);
+
+                        printf("\nSetting callsign to %s\n",settingsData.callsign);
+
+                        settingsAreDirty = true;
+                        break;
+                    }
+
                     if (strcmp("LOCATOR", key) == 0)
                     {
                         strncpy(settingsData.locator, value, 16);
@@ -345,160 +394,168 @@ void handleSettings(bool forceSettingsEntry)
                         printf("\nSetting locator to %s\n",settingsData.locator);
 
                         settingsAreDirty = true;
+                        break;
                     }
-                    else
+
+                    if (strcmp("BAND", key) == 0)
                     {
-                        if (strcmp("BAND", key) == 0)
+                        int bandIndex = bandIndexFromString(value);
+
+                        if (bandIndex!= -1 && bandIndex < NUM_BANDS)
                         {
-                            int bandIndex = bandIndexFromString(value);
-
-                            if (bandIndex!= -1 && bandIndex < NUM_BANDS)
-                            {
-                                settingsData.bandIndex = bandIndex;
+                            settingsData.bandIndex = bandIndex;
 #ifdef BANDS_BIT_PATTERN   
-                                uint32_t pattern = 1 << bandIndex;
+                            uint32_t pattern = 1 << bandIndex;
 
-                                settingsData.bandsBitPattern ^= pattern;
- #endif
-                                printf("\nSetting Band to %dm\n",bandNames[settingsData.bandIndex]); 
-                                settingsAreDirty = true;
-                            }
-                            else
-                            {
-                                printf("\nError: Unknown band\n");
-                            }
+                            settingsData.bandsBitPattern ^= pattern;
+#endif
+                            printf("\nSetting Band to %dm\n",bandNames[settingsData.bandIndex]); 
+                            settingsAreDirty = true;
                         }
                         else
                         {
-                            if (strcmp("SLOTSKIP", key) == 0)
+                            printf("\nError: Unknown band\n");
+                        }
+                        break;
+                    }
+
+                    if (strcmp("SLOTSKIP", key) == 0)
+                    {
+                        int slotSkip = atoi(value);
+                        if (slotSkip > 0 && slotSkip <= 100)
+                        {
+                            settingsData.slotSkip = atoi(value);
+
+                            printf("\nSetting Slot skip to %d\n",settingsData.slotSkip);
+                            settingsAreDirty = true;
+                        }
+                        else
+                        {
+                            printf("\nERROR: Slot skip must be between 1 and 100 inclusive\n");
+                        }
+                        break;
+                    }
+
+                    if (strcmp("CALPPM", key) == 0)
+                    {
+                        settingsData.freqCalibrationPPM = atoi(value);
+
+                        printf("\nSetting frequency calibration to %d ppm\n",settingsData.freqCalibrationPPM);
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("RFPIN", key) == 0)
+                    {
+                        settingsData.rfPin = atoi(value);
+
+                        printf("\nSetting RF pin to %d ppm\n",settingsData.rfPin);
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("OFFSET", key) == 0)
+                    {
+                        settingsData.initialOffsetInWSPRFreqRange = atoi(value);
+
+                        printf("\nSetting initial freq offset to %d ppm\n",settingsData.initialOffsetInWSPRFreqRange);
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("FREQHOP", key) == 0)
+                    {
+                        settingsData.frequencyHop = (strcmp(value,"ON") == 0);
+
+                        printf("\nSetting frequency hop to %s\n",settingsData.frequencyHop?"On":"Off");
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("GPS", key) == 0)
+                    {
+                        if (strcmp(value,"OFF") == 0)
+                        {
+                            settingsData.gpsMode = GPS_MODE_OFF;
+                            printf("\nSetting GPS mode to Off\n");
+                        }
+                        else
+                        {
+                            if (strcmp(value,"ON") == 0)
                             {
-                                int slotSkip = atoi(value);
-                                if (slotSkip > 0 && slotSkip <= 100)
-                                {
-                                    settingsData.slotSkip = atoi(value);
-
-                                    printf("\nSetting Slot skip to %d\n",settingsData.slotSkip);
-                                    settingsAreDirty = true;
-                                }
-                                else
-                                {
-                                    printf("\nERROR: Slot skip must be between 1 and 100 inclusive\n");
-                                }
-                            }
-                            else
-                            {
-                                if (strcmp("CALPPM", key) == 0)
-                                {
-                                    settingsData.freqCalibrationPPM = atoi(value);
-
-                                    printf("\nSetting frequency calibration to %d ppm\n",settingsData.freqCalibrationPPM);
-                                    settingsAreDirty = true;
-                                }
-                                else
-                                {
-                                    if (strcmp("RFPIN", key) == 0)
-                                    {
-                                        settingsData.rfPin = atoi(value);
-
-                                        printf("\nSetting RF pin to %d ppm\n",settingsData.rfPin);
-                                        settingsAreDirty = true;
-                                    }
-                                    else
-                                    {
-                                        if (strcmp("OFFSET", key) == 0)
-                                        {
-                                            settingsData.initialOffsetInWSPRFreqRange = atoi(value);
-
-                                            printf("\nSetting initial freq offset to %d ppm\n",settingsData.initialOffsetInWSPRFreqRange);
-                                            settingsAreDirty = true;
-                                        }
-                                        else
-                                        {
-                                            if (strcmp("FREQHOP", key) == 0)
-                                            {
-                                                settingsData.frequencyHop = (strcmp(value,"ON") == 0);
-
-                                                printf("\nSetting frequency hop to %s\n",settingsData.frequencyHop?"On":"Off");
-                                                settingsAreDirty = true;
-                                            }
-                                            else
-                                            {
-                                                if (strcmp("GPS", key) == 0)
-                                                {
-                                                    if (strcmp(value,"OFF") == 0)
-                                                    {
-                                                        settingsData.gpsMode = GPS_MODE_OFF;
-                                                        printf("\nSetting GPS mode to Off\n");
-                                                    }
-                                                    else
-                                                    {
-                                                        if (strcmp(value,"ON") == 0)
-                                                        {
-                                                            settingsData.gpsMode = GPS_MODE_ON;
-                                                            printf("\nSetting GPS mode to On\n");
-                                                        }
-                                                    }
-
-                                                    settingsAreDirty = true;
-                                                }
-                                                else
-                                                {
-                                                    if (strcmp("POWER", key) == 0)
-                                                    {
-                                                        settingsData.outputPowerDbm = atoi(value);
-
-                                                        printf("\nSetting Power to %d dBm\n",settingsData.outputPowerDbm);
-
-                                                        settingsAreDirty = true;
-                                                    }
-                                                    else
-                                                    {
-                                                        if (strcmp("GPSLOCATION", key) == 0)
-                                                        {
-                                                            if (strcmp(value,"ON") == 0)
-                                                            {
-                                                                settingsData.gpsLocation = 1;
-                                                                printf("\nSetting GPS location to On\n");
-                                                            }
-                                                            else
-                                                            {
-                                                                settingsData.gpsLocation = 0;
-                                                                printf("\nSetting GPS location to Off\n");
-                                                            }
-
-                                                            settingsAreDirty = true;
-                                                        }
-                                                        else
-                                                        {
-                                                            if (strcmp("LONGLOCATOR", key) == 0)
-                                                            {
-                                                                if (strcmp(value,"ON") == 0)
-                                                                {
-                                                                    settingsData.longLocator = 1;
-                                                                    printf("\nSetting Long Locator to On\n");
-                                                                }
-                                                                else
-                                                                {
-                                                                    settingsData.longLocator = 0;
-                                                                    printf("\nSetting Long Locator to Off\n");
-                                                                }
-
-                                                                settingsAreDirty = true;
-                                                            }
-                                                            else
-                                                            {
-                                                                printf("Uknown setting\n");
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                settingsData.gpsMode = GPS_MODE_ON;
+                                printf("\nSetting GPS mode to On\n");
                             }
                         }
+
+                        settingsAreDirty = true;
+                        break;
                     }
+
+                    if (strcmp("POWER", key) == 0)
+                    {
+                        settingsData.outputPowerDbm = atoi(value);
+
+                        printf("\nSetting Power to %d dBm\n",settingsData.outputPowerDbm);
+
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("GPSLOCATION", key) == 0)
+                    {
+                        if (strcmp(value,"ON") == 0)
+                        {
+                            settingsData.gpsLocation = 1;
+                            printf("\nSetting GPS location to On\n");
+                        }
+                        else
+                        {
+                            settingsData.gpsLocation = 0;
+                            printf("\nSetting GPS location to Off\n");
+                        }
+
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("LONGLOCATOR", key) == 0)
+                    {
+                        if (strcmp(value,"ON") == 0)
+                        {
+                            settingsData.longLocator = 1;
+                            printf("\nSetting Long Locator to On\n");
+                        }
+                        else
+                        {
+                            settingsData.longLocator = 0;
+                            printf("\nSetting Long Locator to Off\n");
+                        }
+
+                        settingsAreDirty = true;
+                        break;
+                    }
+
+                    if (strcmp("TXFREQ", key) == 0)
+                    {
+                        settingsData.txFreq = atoi(value);
+
+                        printf("\nSetting Tx Freq to %d\n",settingsData.txFreq);
+
+                        settingsAreDirty = true;
+                        break;
+                    }      
+                    
+                    if (strcmp("CWSPEED", key) == 0)
+                    {
+                        settingsData.cwSpeed = atoi(value);
+
+                        printf("\nSetting CW Speed to %d\n",settingsData.cwSpeed);
+
+                        settingsAreDirty = true;
+                        break;
+                    }     
+                    break;                
                 }
             } 
             else 

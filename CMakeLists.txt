@@ -50,6 +50,7 @@ target_sources(pico-wspr-tx-enhanced PUBLIC
                ${CMAKE_CURRENT_LIST_DIR}/core1.c
                ${CMAKE_CURRENT_LIST_DIR}/main.c
                ${CMAKE_CURRENT_LIST_DIR}/persistentStorage.c
+                ${CMAKE_CURRENT_LIST_DIR}/cw_beacon.c
               )
 
 pico_set_program_name(pico-wspr-tx-enhanced "pico-wspr-tx-enhanced")
