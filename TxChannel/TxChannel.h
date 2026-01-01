@@ -82,9 +82,9 @@ typedef struct
 } TxChannelContext;
 
 TxChannelContext *TxChannelInit(const uint32_t bit_period_us, uint8_t timer_alarm_num);
-uint8_t TxChannelPending(TxChannelContext *pctx);
-int TxChannelPush(TxChannelContext *pctx, uint8_t *psrc, int n);
-int TxChannelPop(TxChannelContext *pctx, uint8_t *pdst);
+uint8_t TxChannelPending(void);
+int TxChannelPush(uint8_t *psrc, int n);
+int TxChannelPop(uint8_t *pdst);
 void TxChannelClear(TxChannelContext *pctx);
 
 void TxChannelStart(void);

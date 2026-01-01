@@ -50,7 +50,7 @@
 #include "TxChannel.h"
 
 static TxChannelContext txChannelContext = {0};
-static TxChannelContext *spTX = &txChannelContext;
+//static TxChannelContext *spTX = &txChannelContext;
 
 PioDco DCO = {0};
 
@@ -70,7 +70,7 @@ static int64_t __not_in_flash_func (TxChannelISR)(alarm_id_t id, void *user_data
     PioDco *pDCO = txChannelContext._p_oscillator;
 
     uint8_t byte;
-    const int n2send = TxChannelPop(spTX, &byte);
+    const int n2send = TxChannelPop(&byte);
     if(n2send)
     {
         const int32_t i32_compensation_millis = 
@@ -177,9 +177,9 @@ void TxChannelStop(void)
 /// @brief Gets a count of bytes to send.
 /// @param pctx Context.
 /// @return A count of bytes.
-uint8_t TxChannelPending(TxChannelContext *pctx)
+uint8_t TxChannelPending(void)
 {
-    return 256L + (int)pctx->_ix_input - (int)pctx->_ix_output;
+    return 256L + (int)txChannelContext._ix_input - (int)txChannelContext._ix_output;
 }
 
 /// @brief Push a number of bytes to the output FIFO.
@@ -187,12 +187,12 @@ uint8_t TxChannelPending(TxChannelContext *pctx)
 /// @param psrc Ptr to buffer to send.
 /// @param n A count of bytes to send.
 /// @return A count of bytes has been sent (might be lower than n).
-int TxChannelPush(TxChannelContext *pctx, uint8_t *psrc, int n)
+int TxChannelPush(uint8_t *psrc, int n)
 {
-    uint8_t *pdst = pctx->_pbyte_buffer;
-    while(n-- && pctx->_ix_input != pctx->_ix_output)
+    uint8_t *pdst = txChannelContext._pbyte_buffer;
+    while(n-- && txChannelContext._ix_input != txChannelContext._ix_output)
     {
-        pdst[pctx->_ix_input++] = *psrc++;
+        pdst[txChannelContext._ix_input++] = *psrc++;
     }
 
     return n;
@@ -202,11 +202,11 @@ int TxChannelPush(TxChannelContext *pctx, uint8_t *psrc, int n)
 /// @param pctx Context.
 /// @param pdst Ptr to write a byte.
 /// @return 1 if a byte has been retrived, or 0.
-int TxChannelPop(TxChannelContext *pctx, uint8_t *pdst)
+int TxChannelPop(uint8_t *pdst)
 {
-    if(pctx->_ix_input != pctx->_ix_output)
+    if(txChannelContext._ix_input != txChannelContext._ix_output)
     {
-        *pdst = pctx->_pbyte_buffer[pctx->_ix_output++];
+        *pdst = txChannelContext._pbyte_buffer[txChannelContext._ix_output++];
 
         return 1;
     }
@@ -218,5 +218,5 @@ int TxChannelPop(TxChannelContext *pctx, uint8_t *pdst)
 /// @param pctx Context.
 void TxChannelClear(TxChannelContext *pctx)
 {
-    pctx->_ix_input = pctx->_ix_output = 0;
+    txChannelContext._ix_input = txChannelContext._ix_output = 0;
 }
