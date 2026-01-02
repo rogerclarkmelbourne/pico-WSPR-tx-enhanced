@@ -68,7 +68,7 @@ uint32_t CW_SYMBOL_LIST[] =
 0x00001dd7,//Z
 };
 
-
+static PioDco DCO = {0};
 
 static char cwMessage[32];
 static const char* messagePtr;
@@ -103,12 +103,12 @@ bool sendMessageProgress(void)
 				//printf("%d", bitPattern & 0x01);
 				if ((bitPattern & 0x01))
 				{
-				    PioDCOStart(pTX->_p_oscillator);// turn on the oscillator
+				    PioDCOStart(&DCO);// turn on the oscillator
 					bitPatternCounter = BIT_COUNTER_RESET_VALUE;
 				}
 				else
 				{
-				    PioDCOStop(pTX->_p_oscillator);// turn off the oscillator
+				    PioDCOStop(&DCO);// turn off the oscillator
 				}
 				bitPatternCounter--;
 				bitPattern = bitPattern >> 1;
@@ -140,14 +140,15 @@ char randChar(void)
 }
 void handleCW(void)
 {
+
+	PioDCOInit(&DCO, settingsData.rfPin);
+    PioDCOSetFreq(&DCO, settingsData.txFreq, 0);
+
 	if (settingsData.mode == MODE_CW_BEACON)
 	{
 		snprintf(cwMessage,32, "%s %s     ",settingsData.callsign,settingsData.locator);
 	}
 
-	pTX = TxChannelInit(1000000, 0);// 1000000 is not used for CW Tx
-
-	TxChannelSetFrequency(settingsData.txFreq,0);
 
 	while(true)
 	{
