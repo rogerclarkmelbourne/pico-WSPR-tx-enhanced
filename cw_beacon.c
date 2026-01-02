@@ -68,7 +68,7 @@ uint32_t CW_SYMBOL_LIST[] =
 0x00001dd7,//Z
 };
 
-static PioDco DCO = {0};
+TxChannelContext *pTX;
 
 static char cwMessage[32];
 static const char* messagePtr;
@@ -87,8 +87,6 @@ void sendMessageInitBitPattern(void)
 }
 
 
-TxChannelContext *pTX;
-
 bool sendMessageProgress(void)
 {
 	bool retVal = TRUE;
@@ -100,15 +98,15 @@ bool sendMessageProgress(void)
 		case 1:
 			if (bitPatternCounter > 0)
 			{
-				//printf("%d", bitPattern & 0x01);
+				printf("%d", bitPattern & 0x01);
 				if ((bitPattern & 0x01))
 				{
-				    PioDCOStart(&DCO);// turn on the oscillator
+				    PioDCOStart(pTX->_p_oscillator);// turn on the oscillator
 					bitPatternCounter = BIT_COUNTER_RESET_VALUE;
 				}
 				else
 				{
-				    PioDCOStop(&DCO);// turn off the oscillator
+				    PioDCOStop(pTX->_p_oscillator);// turn off the oscillator
 				}
 				bitPatternCounter--;
 				bitPattern = bitPattern >> 1;
@@ -138,37 +136,64 @@ char randChar(void)
 	const char *randCharStr="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	return randCharStr[rand() % 36];
 }
+
+void sendCwMessage(void)
+{
+	messagePtr = cwMessage;
+	cwMessageState = 0;
+	bool b;
+
+	printf("Send message CW %s\n",messagePtr);
+	do
+	{
+		b = sendMessageProgress();
+		sleep_ms(1200 / settingsData.cwSpeed);
+	} while (b);
+
+	sleep_ms(1000);// wait 1 second
+}
+
 void handleCW(void)
 {
 
-	PioDCOInit(&DCO, settingsData.rfPin);
-    PioDCOSetFreq(&DCO, settingsData.txFreq, 0);
-
-	if (settingsData.mode == MODE_CW_BEACON)
-	{
-		snprintf(cwMessage,32, "%s %s     ",settingsData.callsign,settingsData.locator);
-	}
-
+	pTX = TxChannelInit(1000, 0);// 682667 is WSPR symbol duration in microseconds
+	TxChannelSetFrequency(settingsData.txFreq,0);
 
 	while(true)
 	{
 
-		if (settingsData.mode == MODE_SLOW_MORSE)
+		snprintf(cwMessage,32, "%s",settingsData.callsign);
+		sendCwMessage();// send callsign
+
+		// Send Callsign + Locator or 5 fig group,    5 times
+		for(int loopCounter = 0; loopCounter<5; loopCounter++)
 		{
-			for(int i=0;i<5;i++)
+
+			if (settingsData.mode == MODE_SLOW_MORSE)
 			{
-				cwMessage[i]=randChar();
+				for(int i=0;i<5;i++)
+				{
+					cwMessage[i]=randChar();
+				}
+				cwMessage[5] = 0;// terminate
 			}
-			cwMessage[5] = 0;// terminate
+			else
+			{
+				snprintf(cwMessage,32, "%s %s     ",settingsData.callsign,settingsData.locator);
+			}
+
+			sendCwMessage();
+
 		}
 
-		messagePtr = cwMessage;
-		cwMessageState = 0;
-		bool b;
-		do
+
+		if (settingsData.mode == MODE_CW_BEACON)
 		{
-			b = sendMessageProgress();
-			sleep_ms(1200 / settingsData.cwSpeed);
-		} while (b);
+			sleep_ms(30 * 1000);// wait 30 seconds before retransmitting
+		}
+		else
+		{
+			sleep_ms(2 * 1000);// wait 30 seconds before retransmitting
+		}
 	}
 }
