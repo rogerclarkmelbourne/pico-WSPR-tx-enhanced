@@ -98,7 +98,7 @@ bool sendMessageProgress(void)
 		case 1:
 			if (bitPatternCounter > 0)
 			{
-				printf("%d", bitPattern & 0x01);
+				//printf("%d", bitPattern & 0x01);
 				if ((bitPattern & 0x01))
 				{
 				    PioDCOStart(pTX->_p_oscillator);// turn on the oscillator
@@ -143,7 +143,7 @@ void sendCwMessage(void)
 	cwMessageState = 0;
 	bool b;
 
-	printf("Send message CW %s\n",messagePtr);
+	//printf("Send message CW %s\n",messagePtr);
 	do
 	{
 		b = sendMessageProgress();
@@ -162,7 +162,7 @@ void handleCW(void)
 	while(true)
 	{
 
-		snprintf(cwMessage,32, "%s",settingsData.callsign);
+		//snprintf(cwMessage,32, "%s",settingsData.callsign);
 		sendCwMessage();// send callsign
 
 		// Send Callsign + Locator or 5 fig group,    5 times
